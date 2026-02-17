@@ -7,14 +7,10 @@
     
     <title>NEONBEAT-Rhythm game</title>
     <meta name="description" content="Early Access rhythm game with dynamically generated note charts for any music.">
-    <meta property="og:title" content="NEONBEAT-Rhythm game">
-    <meta property="og:description" content="Early Access rhythm game with dynamically generated note charts for any music.">
-    <meta property="og:type" content="website">
-    <meta name="twitter:title" content="NEONBEAT-Rhythm game">
-    <meta name="twitter:description" content="Early Access rhythm game with dynamically generated note charts for any music.">
+
     <style>
         /* =========================================
-           1. 全域與 PC 版基礎設定 (維持原版設計)
+           1. 全域設定與基礎樣式
            ========================================= */
         :root {
             --neon-blue: #00f3ff;
@@ -24,8 +20,14 @@
             --bg-color: #050505;
         }
         
-        /* [優化] 加上 touch-action: none 禁止所有預設手勢，解決觸控延遲與誤觸 */
-        body, html { margin: 0; padding: 0; background: var(--bg-color); color: #fff; font-family: 'Segoe UI', sans-serif; overflow: hidden; user-select: none; touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; }
+        /* 禁止預設手勢，解決觸控延遲與誤觸 */
+        body, html { 
+            margin: 0; padding: 0; 
+            background: var(--bg-color); color: #fff; 
+            font-family: 'Segoe UI', sans-serif; 
+            overflow: hidden; user-select: none; 
+            touch-action: none; -webkit-touch-callout: none; -webkit-user-select: none; 
+        }
 
         /* 背景層 */
         #bg-container {
@@ -39,11 +41,14 @@
             pointer-events: none; 
         }
 
-        /* 遊戲主舞台 */
+        /* =========================================
+           2. 遊戲主舞台 (Canvas 與 容器)
+           ========================================= */
         #gear-stage {
             position: relative; z-index: 10; 
             width: 520px; 
             height: 100vh; margin: 0 auto;
+            overflow: visible; /* 允許 Canvas 內容溢出，防止邊界截斷 */
             background: rgba(10, 15, 20, 0.6);
             border-left: 4px solid #333; border-right: 4px solid #333;
             box-shadow: 0 0 60px rgba(0,0,0,0.8);
@@ -55,8 +60,14 @@
                 transparent 76%);
             background-size: 100% 100%;
             transition: transform 0.1s ease-out, filter 0.5s ease-in-out;
-            /* [新增] 確保舞台本身也能正確接收觸控 */
             touch-action: none;
+        }
+
+        #gameCanvas {
+            position: absolute;
+            top: 0; left: 0;
+            width: 100%; height: 100%;
+            display: block; padding: 0; margin: 0;
         }
         
         .fever-mode-active {
@@ -66,9 +77,9 @@
         }
         @keyframes pulse-border { from { box-shadow: 0 0 50px var(--neon-gold); } to { box-shadow: 0 0 100px var(--neon-gold); } }
 
-        canvas { display: block; width: 100%; height: 100%; }
-
-        /* HUD (介面) */
+        /* =========================================
+           3. HUD (抬頭顯示器)
+           ========================================= */
         .hud { position: absolute; top: 0; left: 0; width: 100%; height: 100%; pointer-events: none; }
         
         #song-title-display {
@@ -90,64 +101,20 @@
             box-shadow: 0 0 10px var(--neon-blue); transition: width 0.1s linear;
         }
         
-        /* 難度顯示 */
         #difficulty-display {
-            position: absolute; 
-            top: 10px; 
-            left: 50%; transform: translateX(-50%);
+            position: absolute; top: 10px; left: 50%; transform: translateX(-50%);
             color: var(--neon-blue); font-weight: bold; font-size: 18px;
             letter-spacing: 2px; text-shadow: 0 0 10px var(--neon-blue);
             z-index: 101; pointer-events: none; width: 100%; text-align: center;
             display: none; 
         }
 
-        /* 手機版暫停按鈕 (預設隱藏) */
-        #mobile-pause-btn {
-            position: fixed; 
-            top: 20px; 
-            right: 20px; 
-            width: 40px; 
-            height: 40px; 
-            border: 2px solid var(--neon-blue); 
-            background: rgba(0, 0, 0, 0.5); 
-            border-radius: 50%; 
-            z-index: 200; 
-            display: none; 
-            justify-content: center; 
-            align-items: center; 
-            pointer-events: auto; 
-            cursor: pointer;
-            backdrop-filter: blur(4px);
-        }
-        #mobile-pause-btn::before {
-            content: "||";
-            color: var(--neon-blue);
-            font-weight: 900;
-            font-size: 16px;
-            text-shadow: 0 0 5px var(--neon-blue);
-        }
+        /* PC版 HUD 元素 */
+        #hp-bar-wrap { position: absolute; left: -20px; bottom: 20%; width: 12px; height: 60%; background: #222; border: 1px solid #555; border-radius: 4px; overflow: hidden; }
+        #hp-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; background: linear-gradient(to top, var(--neon-blue), #fff); transition: height 0.2s cubic-bezier(0.25, 1, 0.5, 1); }
 
-        /* PC版 HUD */
-        #hp-bar-wrap { 
-            position: absolute; left: -20px; bottom: 20%; width: 12px; height: 60%; 
-            background: #222; border: 1px solid #555; border-radius: 4px; overflow: hidden;
-        }
-        #hp-fill { 
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; 
-            background: linear-gradient(to top, var(--neon-blue), #fff); 
-            transition: height 0.2s cubic-bezier(0.25, 1, 0.5, 1); 
-        }
-
-        #fever-wrap { 
-            position: absolute; right: -20px; bottom: 20%; width: 12px; height: 60%; 
-            background: #222; border: 1px solid #555; border-radius: 4px; overflow: hidden;
-        }
-        #fever-fill { 
-            position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; 
-            background: var(--neon-gold); 
-            box-shadow: 0 0 15px var(--neon-gold); 
-            transition: height 0.05s linear;
-        }
+        #fever-wrap { position: absolute; right: -20px; bottom: 20%; width: 12px; height: 60%; background: #222; border: 1px solid #555; border-radius: 4px; overflow: hidden; }
+        #fever-fill { position: absolute; bottom: 0; left: 0; width: 100%; height: 0%; background: var(--neon-gold); box-shadow: 0 0 15px var(--neon-gold); transition: height 0.05s linear; }
         
         #fever-txt { 
             position: absolute; top: 70%; left: 50%; transform: translate(-50%, -50%); 
@@ -158,31 +125,20 @@
             transition: opacity 0.3s ease-in-out, transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
 
-        #combo-box { 
-            position: absolute; top: 25%; width: 100%; text-align: center; 
-            opacity: 0; transition: opacity 0.5s ease-in; 
-        }
+        #combo-box { position: absolute; top: 25%; width: 100%; text-align: center; opacity: 0; transition: opacity 0.5s ease-in; }
         .show-combo { opacity: 1 !important; transition: opacity 0.1s !important; }
 
-        #judge-txt {
-            font-size: 54px; font-weight: 900; font-style: italic; text-align: center;
-            transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275);
-            text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; letter-spacing: 2px;
-        }
+        #judge-txt { font-size: 54px; font-weight: 900; font-style: italic; text-align: center; transition: transform 0.1s cubic-bezier(0.175, 0.885, 0.32, 1.275); text-shadow: 0 0 20px currentColor, 0 0 40px currentColor; letter-spacing: 2px; }
         #combo-num { font-size: 90px; font-weight: 900; line-height: 1; color: #fff; }
         #combo-lbl { font-size: 20px; letter-spacing: 8px; color: #888; font-weight: bold; }
 
         .key-row { position: absolute; bottom: 30px; width: 100%; display: flex; justify-content: space-around; pointer-events: auto; }
-        .key-cap { 
-            width: 22%; text-align: center; font-size: 28px; font-weight: 900; color: #888; 
-            padding: 10px 0; transition: all 0.05s;
-        }
-        .key-cap.active { 
-            color: #000; border-color: #fff; 
-            background: var(--neon-blue); box-shadow: 0 0 25px var(--neon-blue);
-            transform: translateY(2px);
-        }
+        .key-cap { width: 22%; text-align: center; font-size: 28px; font-weight: 900; color: #888; padding: 10px 0; transition: all 0.05s; }
+        .key-cap.active { color: #000; border-color: #fff; background: var(--neon-blue); box-shadow: 0 0 25px var(--neon-blue); transform: translateY(2px); }
 
+        /* =========================================
+           4. 選單與介面 (Overlay)
+           ========================================= */
         .overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.94); z-index: 999;
@@ -191,37 +147,29 @@
         }
         .hidden { display: none !important; }
 
-        h1 { 
-            font-size: 100px; 
-            color: var(--neon-blue); margin-bottom: 30px; 
-            text-transform: uppercase; letter-spacing: 10px; 
-            text-shadow: 0 0 30px var(--neon-blue); font-style: italic;
-            white-space: nowrap; 
-            text-align: center;
-        }
-
-        .btn-group { display: flex; gap: 30px; margin-top: 30px; justify-content: center; }
+        h1 { font-size: 100px; color: var(--neon-blue); margin-bottom: 30px; text-transform: uppercase; letter-spacing: 10px; text-shadow: 0 0 30px var(--neon-blue); font-style: italic; white-space: nowrap; text-align: center; }
         
-        button {
-            padding: 15px 40px; font-size: 20px; font-weight: 800; color: #fff; background: transparent;
-            border: 2px solid var(--neon-blue); cursor: pointer; text-transform: uppercase; letter-spacing: 2px;
-            transition: all 0.2s;
-        }
+        .btn-group { display: flex; gap: 30px; margin-top: 30px; justify-content: center; }
+        button { padding: 15px 40px; font-size: 20px; font-weight: 800; color: #fff; background: transparent; border: 2px solid var(--neon-blue); cursor: pointer; text-transform: uppercase; letter-spacing: 2px; transition: all 0.2s; }
         button:hover { background: var(--neon-blue); color: #000; box-shadow: 0 0 40px var(--neon-blue); transform: scale(1.1); }
 
         .file-zone { display: flex; gap: 40px; margin-bottom: 30px; }
-        .file-box { 
-            border: 2px dashed #555; padding: 40px; width: 240px; text-align: center; 
-            border-radius: 15px; cursor: pointer; transition: 0.3s; 
-        }
+        .file-box { border: 2px dashed #555; padding: 40px; width: 240px; text-align: center; border-radius: 15px; cursor: pointer; transition: 0.3s; }
         .file-box:hover { border-color: var(--neon-blue); background: rgba(0,243,255,0.1); }
         .file-box label { cursor: pointer; display: block; width: 100%; height: 100%; color: #888; font-size: 16px; font-weight: bold; }
         .file-box.selected { border-color: var(--neon-blue); background: rgba(0, 243, 255, 0.15); box-shadow: 0 0 20px rgba(0, 243, 255, 0.4); }
         input[type="file"] { display: none; }
+        
         .setting-zone { margin-bottom: 20px; color: #aaa; font-size: 18px; display: flex; align-items: center; gap: 10px; }
         input[type="checkbox"] { transform: scale(1.5); accent-color: var(--neon-blue); cursor: pointer; }
+        
+        /* 音量拉條樣式 */
+        .setting-item { display: flex; align-items: center; gap: 15px; margin: 10px 0; }
+        .neon-slider { -webkit-appearance: none; width: 150px; height: 6px; background: #222; border: 1px solid var(--neon-blue); border-radius: 5px; outline: none; box-shadow: 0 0 10px var(--neon-blue); }
+        .neon-slider::-webkit-slider-thumb { -webkit-appearance: none; width: 18px; height: 18px; background: #fff; border-radius: 50%; cursor: pointer; box-shadow: 0 0 15px var(--neon-blue); }
+        #volume-display { min-width: 40px; color: var(--neon-blue); font-family: 'Courier New', monospace; font-weight: bold; }
 
-        /* 結果畫面 (PC) */
+        /* 結果畫面相關 */
         #cd-num { font-size: 180px; font-weight: 900; color: #fff; text-shadow: 0 0 60px var(--neon-blue); }
         #res-rank { font-size: 160px; font-weight: 900; margin: 10px 0; text-shadow: 0 0 50px currentColor; }
         .stats-table { display: grid; grid-template-columns: 1fr 1fr; gap: 10px 40px; text-align: left; margin: 20px 0; font-size: 24px; color: #ccc; }
@@ -234,138 +182,58 @@
         .stat-item { display: flex; justify-content: space-between; width: 100%; max-width: 400px; font-size: 20px; }
 
         /* =========================================
-           2. 手機版 RWD 覆寫設定 (螢幕 < 768px)
+           5. 手機版 RWD 覆寫 (螢幕 < 768px)
            ========================================= */
+        #mobile-pause-btn {
+            position: fixed; top: 20px; right: 20px; width: 40px; height: 40px; 
+            border: 2px solid var(--neon-blue); background: rgba(0, 0, 0, 0.5); border-radius: 50%; 
+            z-index: 200; display: none; justify-content: center; align-items: center; 
+            pointer-events: auto; cursor: pointer; backdrop-filter: blur(4px);
+        }
+        #mobile-pause-btn::before {
+            content: "||"; color: var(--neon-blue); font-weight: 900; font-size: 16px; text-shadow: 0 0 5px var(--neon-blue);
+        }
+
         @media (max-width: 768px) {
             #gear-stage { 
                 width: 100%; max-width: 100%; border-left-width: 2px; border-right-width: 2px; 
                 box-sizing: border-box; 
             }
-
             #mobile-pause-btn { display: flex; }
             #box-video { display: none !important; }
-
-            #song-title-display {
-                width: 90%; 
-                left: 5%;
-            }
-            #song-name-text {
-                max-width: 100%;
-                overflow: hidden;
-                text-overflow: ellipsis;
-                white-space: nowrap;
-            }
-
-            h1 { 
-                font-size: 13vw; 
-                letter-spacing: 2px;
-                margin-bottom: 20px;
-                white-space: nowrap; 
-                padding-left: 10px; 
-                padding-right: 10px;
-                box-sizing: border-box;
-            }
-
-            #result-screen {
-                padding-left: 20px;
-                padding-right: 20px;
-                box-sizing: border-box;
-            }
-
+            #song-title-display { width: 90%; left: 5%; }
+            #song-name-text { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+            h1 { font-size: 13vw; letter-spacing: 2px; margin-bottom: 20px; white-space: nowrap; padding-left: 10px; padding-right: 10px; box-sizing: border-box; }
+            #result-screen { padding-left: 20px; padding-right: 20px; box-sizing: border-box; }
             #judge-txt { font-size: 36px; } 
             #combo-num { font-size: 60px; } 
             #combo-lbl { font-size: 14px; }
             #fever-txt { font-size: 30px; letter-spacing: 2px; top: 60%; } 
-
             #hp-bar-wrap { left: 2px; bottom: 25%; width: 6px; height: 50%; border-color: rgba(255,255,255,0.3); }
             #fever-wrap { right: 2px; bottom: 25%; width: 6px; height: 50%; border-color: rgba(255,255,255,0.3); }
-
             #song-progress-container { width: 100%; }
             #difficulty-display { font-size: 16px; top: 15px; }
-
-            .file-zone { 
-                flex-direction: column; align-items: center; gap: 15px; 
-                width: 100%; 
-            }
-            .file-box { 
-                width: 100%; 
-                padding: 20px; 
-                box-sizing: border-box; 
-            }
-            
+            .file-zone { flex-direction: column; align-items: center; gap: 15px; width: 100%; }
+            .file-box { width: 100%; padding: 20px; box-sizing: border-box; }
             .btn-group { flex-wrap: wrap; justify-content: center; gap: 10px; }
             button { padding: 10px 20px; font-size: 16px; min-width: 100px; }
-
-            .key-row { 
-                bottom: 8vh !important; 
-                height: 14vh !important; 
-                align-items: flex-end; 
-                padding-bottom: 0;
-            }
+            .key-row { bottom: 8vh !important; height: 14vh !important; align-items: flex-end; padding-bottom: 0; }
             .key-cap { 
-                width: 24.5%; 
-                height: 100%; 
-                display: flex; align-items: flex-end; justify-content: center; 
-                padding-bottom: 15px; 
-                border-bottom: 4px solid rgba(255,255,255,0.1);
+                width: 24.5%; height: 100%; display: flex; align-items: flex-end; justify-content: center; 
+                padding-bottom: 15px; border-bottom: 4px solid rgba(255,255,255,0.1);
                 background: linear-gradient(to top, rgba(255,255,255,0.05), transparent);
             }
             .key-cap.active { border-bottom-color: #fff; background: linear-gradient(to top, var(--neon-blue), transparent); }
-
             #cd-num { font-size: 40vw; }
             #res-rank { font-size: 30vw; }
         }
-
-	.setting-item {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    margin: 10px 0;
-}
-
-.neon-slider {
-    -webkit-appearance: none;
-    width: 150px;
-    height: 6px;
-    background: #222;
-    border: 1px solid var(--neon-blue);
-    border-radius: 5px;
-    outline: none;
-    box-shadow: 0 0 10px var(--neon-blue);
-    
-}
-
-.neon-slider::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 18px;
-    height: 18px;
-    background: #fff;
-    border-radius: 50%;
-    cursor: pointer;
-    box-shadow: 0 0 15px var(--neon-blue);
-}
-
-#volume-display {
-    min-width: 40px;
-    color: var(--neon-blue);
-    font-family: 'Courier New', monospace;
-    font-weight: bold;
-}
-
-
     </style>
 </head>
 <body>
 
-    <audio id="menu-bgm" loop>
-        <source src="source/main-menu.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="bgm-clear">
-        <source src="source/stage-clear.mp3" type="audio/mpeg">
-    </audio>
-    <audio id="bgm-fail">
-        <source src="source/game-over.mp3" type="audio/mpeg">
-    </audio>
+    <audio id="menu-bgm" loop><source src="source/main-menu.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm-clear"><source src="source/stage-clear.mp3" type="audio/mpeg"></audio>
+    <audio id="bgm-fail"><source src="source/game-over.mp3" type="audio/mpeg"></audio>
 
     <div id="bg-container">
         <video id="bg-video" playsinline webkit-playsinline muted loop></video>
@@ -401,71 +269,65 @@
         </div>
     </div>
 
-<div id="menu-screen" class="overlay">
-    <div id="start-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,1); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;">
-        <h1 style="margin-bottom:40px; font-size: 3rem; ">NEONBEAT</h1>
-        <h3 style="color:#fff; margin-top:-40px; margin-bottom:20px;">SIGNATURE EDITION Early Access</h3>
-	
-        <h2 style="color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue); font-size: 30px; letter-spacing: 5px; animation: pulse 1.5s infinite;">TAP TO START</h2>
-        
-	
-	<p style="color: #888; letter-spacing: 1px; margin-top: 40px; padding-left-right: 20px;">Developed by CurryTarou</p>
-	<p style="color: #888; letter-spacing: 1px; margin-top: -20px; padding-left-right: 20px;">with Google Gemini</p>
-	<p style="color: #888; letter-spacing: 1px; margin-top: 0px;">© 2026 CurryTarou Works</p>
+    <div id="menu-screen" class="overlay">
+        <div id="start-overlay" style="position: absolute; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,1); z-index: 100; display: flex; flex-direction: column; justify-content: center; align-items: center; cursor: pointer;">
+            <h1 style="margin-bottom:40px; font-size: 3rem; ">NEONBEAT</h1>
+            <h3 style="color:#fff; margin-top:-40px; margin-bottom:20px;">SIGNATURE EDITION Early Access</h3>
+            <h2 style="color: var(--neon-blue); text-shadow: 0 0 15px var(--neon-blue); font-size: 30px; letter-spacing: 5px; animation: pulse 1.5s infinite;">TAP TO START</h2>
+            <p style="color: #888; letter-spacing: 1px; margin-top: 40px; padding-left-right: 20px;">Developed by CurryTarou</p>
+            <p style="color: #888; letter-spacing: 1px; margin-top: -20px; padding-left-right: 20px;">with Google Gemini</p>
+            <p style="color: #888; letter-spacing: 1px; margin-top: 0px;">© 2026 CurryTarou Works</p>
+        </div>
 
+        <div id="menu-main-content" style="visibility: hidden; width: 100%; display: flex; flex-direction: column; align-items: center; overflow-y: auto; max-height: 100vh; padding: 20px; box-sizing: border-box;">
+            <h1 style="margin-bottom:30px;">NEONBEAT</h1>
+            <h3 style="color:#fff; margin-top:-40px; margin-bottom:30px; text-align: center;">SIGNATURE EDITION</h3>
+            
+            <div class="setting-item" style="margin-bottom: 30px;">
+                <span class="setting-label">VOLUME</span>
+                <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.4" class="neon-slider ">
+                <span id="volume-display">40%</span>
+            </div>
+
+            <div class="setting-zone">
+                <input type="checkbox" id="chk-fail" checked>
+                <label for="chk-fail">Enable Game Over</label>
+            </div>
+
+            <div class="file-zone">
+                <div class="file-box" id="box-audio" onclick="handleBoxClick(event, 'audio')">
+                    <label id="label-audio" style="pointer-events: none;">
+                        MUSIC MODE<br>(MP3/MP4/WAV)<br><br>
+                        <span id="name-audio" style="color:var(--neon-blue)">Select File</span>
+                    </label>
+                    <input type="file" id="inp-audio" accept="audio/*, .mp3, .wav, .ogg, .m4a" onchange="loadMedia(this.files[0], 'audio')">
+                </div>
+                <div class="file-box" id="box-video" onclick="handleBoxClick(event, 'video')">
+                    <label id="label-video" style="pointer-events: none;">
+                        VIDEO MODE<br>(MP4/MOV)<br><br>
+                        <span id="name-video" style="color:var(--neon-blue)">Select File</span>
+                    </label>
+                    <input type="file" id="inp-video" accept="video/*, .mp4, .webm" onchange="loadMedia(this.files[0], 'video')">
+                </div>
+            </div>
+
+            <div id="diff-opt" style="display:none; text-align:center; width: 100%;">
+                <div style="margin: 20px 0;">
+                    <span style="color: var(--neon-blue); margin-right: 10px;">SPEED:</span>
+                    <button class="diff-btn" onclick="changeSpeed(-1)" style="min-width: 40px; padding: 5px 10px;">-</button>
+                    <h2 id="speed-display" style="display: inline-block; width: 80px; text-align: center; font-size: 20px;">1.00x</h2>
+                    <button class="diff-btn" onclick="changeSpeed(1)" style="min-width: 40px; padding: 5px 10px;">+</button>
+                </div>
+                <p style="color:#888; margin-bottom:15px; letter-spacing:2px;">SELECT DIFFICULTY</p>
+                <div class="btn-group">
+                    <button tabindex="-1" onmousedown="event.preventDefault()" onclick="playMenuImpact(); preInitGame(0.7)">EASY</button>
+                    <button tabindex="-1" onmousedown="event.preventDefault()" onclick="playMenuImpact(); preInitGame(1.0)">NORMAL</button>
+                    <button tabindex="-1" onmousedown="event.preventDefault()" onclick="playMenuImpact(); preInitGame(1.4)">HARD</button>
+                </div>
+            </div>
+        </div>
+        <span style="color:#fff; margin-top: 30px; margin-bottom:30px; text-align: center;">© 2026 CurryTarou Works</span>
     </div>
-
-    <div id="menu-main-content" style="visibility: hidden; width: 100%; display: flex; flex-direction: column; align-items: center; overflow-y: auto; max-height: 100vh; padding: 20px; box-sizing: border-box;">
-        <h1 style="margin-bottom:30px;">NEONBEAT</h1>
-        <h3 style="color:#fff; margin-top:-40px; margin-bottom:30px; text-align: center;">SIGNATURE EDITION</h3>
-	
-        
-	<div class="setting-item" style="margin-bottom: 30px;">
-    <span class="setting-label">VOLUME</span>
-    <input type="range" id="volume-slider" min="0" max="1" step="0.01" value="0.4" class="neon-slider ">
-    <span id="volume-display">40%</span>
-</div>
-
-        <div class="setting-zone">
-            <input type="checkbox" id="chk-fail" checked>
-            <label for="chk-fail">Enable Game Over</label>
-        </div>
-
-        <div class="file-zone">
-            <div class="file-box" id="box-audio" onclick="handleBoxClick(event, 'audio')">
-                <label id="label-audio" style="pointer-events: none;">
-                    MUSIC MODE<br>(MP3/MP4/WAV)<br><br>
-                    <span id="name-audio" style="color:var(--neon-blue)">Select File</span>
-                </label>
-                <input type="file" id="inp-audio" accept="audio/*, .mp3, .wav, .ogg, .m4a" onchange="loadMedia(this.files[0], 'audio')">
-            </div>
-            <div class="file-box" id="box-video" onclick="handleBoxClick(event, 'video')">
-                <label id="label-video" style="pointer-events: none;">
-                    VIDEO MODE<br>(MP4/MOV)<br><br>
-                    <span id="name-video" style="color:var(--neon-blue)">Select File</span>
-                </label>
-                <input type="file" id="inp-video" accept="video/*, .mp4, .webm" onchange="loadMedia(this.files[0], 'video')">
-            </div>
-        </div>
-
-
-        <div id="diff-opt" style="display:none; text-align:center; width: 100%;">
-            <div style="margin: 20px 0;">
-                <span style="color: var(--neon-blue); margin-right: 10px;">SPEED:</span>
-                <button class="diff-btn" onclick="changeSpeed(-1)" style="min-width: 40px; padding: 5px 10px;">-</button>
-                <h2 id="speed-display" style="display: inline-block; width: 80px; text-align: center; font-size: 20px;">1.00x</h2>
-                <button class="diff-btn" onclick="changeSpeed(1)" style="min-width: 40px; padding: 5px 10px;">+</button>
-            </div>
-            <p style="color:#888; margin-bottom:15px; letter-spacing:2px;">SELECT DIFFICULTY</p>
-            <div class="btn-group">
-                <button tabindex="-1" onmousedown="event.preventDefault()" onclick="playMenuImpact(); preInitGame(0.7)">EASY</button>
-                <button tabindex="-1" onmousedown="event.preventDefault()" onclick="playMenuImpact(); preInitGame(1.0)">NORMAL</button>
-                <button tabindex="-1" onmousedown="event.preventDefault()" onclick="playMenuImpact(); preInitGame(1.4)">HARD</button>
-            </div>
-        </div>
-    </div>
-	<span style="color:#fff; margin-top: 30px; margin-bottom:30px; text-align: center;">© 2026 CurryTarou Works</span>
-</div>
 
     <div id="cd-screen" class="overlay hidden"><div id="cd-num">3</div></div>
 
@@ -507,7 +369,7 @@
     </div>
 
 <script>
-const GAME_CONFIG={COLORS:{NOTE_LANES:["#ff0055","#ffffff","#ffffff","#ff0055"],NEON_BLUE:"#00f3ff",NEON_GOLD:"#ffcc00",NEON_RED:"#ff3333",LANE_WIDTH:130,NOTE_HEIGHT:22,HIT_SCALE:5},JUDGEMENT:{WINDOW_PERFECT:.05,WINDOW_GREAT:.1,WINDOW_GOOD:.16,HIT_DETECTION_RANGE:.35,SCORE_PERFECT:500,SCORE_GREAT:300,SCORE_GOOD:100,HP_GAIN_PERFECT:1.5,HP_GAIN_GREAT:1,HP_GAIN_GOOD:.5,HP_LOSS_MISS:5,RELEASE_BUFFER:.2},SPEED:{BASE_TRAVEL_TIME:1.2,OPTIONS:[.75,1,1.25,1.5,1.75,2],FEVER_ACCEL:1.15,MOBILE_SCALE:1.35},GENERATION:{GRID_SNAP:.09,MIN_COOLDOWN:.14,SMOOTHING:.96,PRESCAN_MIN_GAP:.12,DENSITY_CONTROL:{GLOBAL_LIMIT:1,KICK_CHANCE:1,MELODY_CHANCE:.7},LONG_NOTE_RULES:{CHANCE:.2,STABILITY_REQUIRED:1.3,DENSITY_THRESHOLD:3},FLOW_RULES:{ALLOW_OVERFLOW:!0,OVERFLOW_CHANCE:.4,STAIR_STEP:1},SENSITIVITY:{KICK:{threshold:3.5,multiplier:1.4,longNoteProb:.3,min_gap:.15},LEAD:{threshold:1.5,multiplier:1.1,longNoteProb:.45,min_gap:.1},AVG_UPDATE_RATE:.985}},AUDIO:{BPM_MIN:80,BPM_MAX:170,DEFAULT_BPM:120,FFT_SIZE:1024},FEVER:{MAX_VALUE:100,GAIN_PER_HIT:1.2,DRAIN_RATE:100/720,SCORE_MULTIPLIER:2,FILTER_MIN_FREQ:3e3,FILTER_MAX_FREQ:22e3,BASS_GAIN:6}},AudioContext=window.AudioContext||window.webkitAudioContext,actx=new AudioContext,analyser=actx.createAnalyser();analyser.fftSize=GAME_CONFIG.AUDIO.FFT_SIZE;const masterGainNode=actx.createGain();masterGainNode.gain.value=.4,masterGainNode.connect(actx.destination);let mainSource=null,menuGainNode=null,menuSource=null,resultSource=null,resultGainNode=null,resultFadeTimer=null,clearSource=null,clearGain=null,failSource=null,failGain=null,feverBassNode=null,feverFilter=actx.createBiquadFilter();feverFilter.type="lowpass",feverFilter.frequency.value=GAME_CONFIG.FEVER.FILTER_MAX_FREQ;let noiseBuffer=null;function createNoiseBuffer(){const e=2*actx.sampleRate,t=actx.createBuffer(1,e,actx.sampleRate),n=t.getChannelData(0);for(let t=0;t<e;t++)n[t]=2*Math.random()-1;noiseBuffer=t}createNoiseBuffer();let G={screen:"MENU",mediaEl:null,mediaType:"none",playing:!1,paused:!1,animId:null,failEnabled:!0,hp:100,score:0,combo:0,maxCombo:0,fever:0,isFever:!1,feverTimer:null,stats:{perfect:0,great:0,good:0,miss:0,maxCombo:0},notes:[],particles:[],beams:[0,0,0,0],diff:1,baseSpeed:1,currentSpeed:1,scrollSpeedIndex:1,scrollSpeed:1,bpm:120,beatPoints:[],laneEndTime:[0,0,0,0],lastSpawn:0,energyAvg:0,avgLow:60,avgMid:50,prevLow:0,prevMid:0,activeLongNotes:[null,null,null,null],keysHeld:[!1,!1,!1,!1],lineGlow:0,comboTimer:null,audioOffset:.075,lastLane:-1,consecutiveMelody:0,density:0,isResting:!1,smoothTime:0,lastFrameTime:0,menuFadeTimer:null,lastAnalysisTime:0,lastHudUpdate:{hp:-1,fever:-1,combo:-1},volume:.4,videoSourceNode:null};const cvs=document.getElementById("gameCanvas"),ctx=cvs.getContext("2d");let CH=window.innerHeight,CW=window.innerWidth,SCALE_X=1,JUDGE_Y=.84*CH;function resizeCanvas(){const e=document.getElementById("gear-stage");CW=e.clientWidth,CH=e.clientHeight,cvs.width=CW,cvs.height=CH,JUDGE_Y=.84*CH,CW<520?(SCALE_X=CW/520,JUDGE_Y=.75*CH):(SCALE_X=1,JUDGE_Y=.84*CH)}async function preScanAudio(e){G.notes=[],G.laneEndTime=[0,0,0,0],G.lastEpicNoteTime=0;const t=e.getChannelData(0),n=e.sampleRate,a=e.duration-2.5;let o=.2,i=.2;const l=GAME_CONFIG.GENERATION.PRESCAN_MIN_GAP||.12,s=GAME_CONFIG.GENERATION.SENSITIVITY,c=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);for(let e=0;e<t.length;e+=Math.floor(.01*n)){const r=e/n;if(r>a)break;let d=0,m=0,u=1024;for(let n=0;n<u&&e+n<t.length;n++){const a=Math.abs(t[e+n]||0);d+=a,m+=Math.abs(a-Math.abs(t[e+n-1]||0))}const E=d/u,f=m/u;let T=[],g=!1,p=0;if(c&&(G.laneEndTime[0]>r&&p++,G.laneEndTime[1]>r&&p++,G.laneEndTime[2]>r&&p++,G.laneEndTime[3]>r&&p++),E>s.KICK.threshold/100&&E>o*s.KICK.multiplier){let e=Math.random()>.5?0:3;const t=Math.random()<s.KICK.longNoteProb&&r+1<a;let n=!0;if(c&&(0===e&&T.includes(1)&&(n=!1),3===e&&T.includes(2)&&(n=!1),0===e&&G.laneEndTime[1]>r&&(n=!1),3===e&&G.laneEndTime[2]>r&&(n=!1),p>=2&&(n=!1)),n&&r>G.laneEndTime[e]+l){createNoteFromScan(r,e,t,"beat");let n=r+(t?.5:.2);G.laneEndTime[e]=n,c&&(0===e&&(G.laneEndTime[1]=Math.max(G.laneEndTime[1],n+.05)),3===e&&(G.laneEndTime[2]=Math.max(G.laneEndTime[2],n+.05)),T.push(e)),g=!0,p++}}if(f>s.LEAD.threshold/100&&f>i*s.LEAD.multiplier){let e=Math.random()>.5?1:2;const t=Math.random()<s.LEAD.longNoteProb&&r+.5<a;let n=!0;if(c&&(p>=2&&(n=!1),T.some(t=>Math.abs(t-e)<=1)&&(n=!1),1===e&&(G.laneEndTime[0]>r||G.laneEndTime[2]>r)&&(n=!1),2===e&&(G.laneEndTime[1]>r||G.laneEndTime[3]>r)&&(n=!1)),n&&r>G.laneEndTime[e]+l){createNoteFromScan(r,e,t,"melody");let n=r+(t?.5:.2);G.laneEndTime[e]=n,c&&(1===e&&(G.laneEndTime[0]=Math.max(G.laneEndTime[0],n+.05),G.laneEndTime[2]=Math.max(G.laneEndTime[2],n+.05)),2===e&&(G.laneEndTime[1]=Math.max(G.laneEndTime[1],n+.05),G.laneEndTime[3]=Math.max(G.laneEndTime[3],n+.05)),T.push(e)),g=!0,p++}}g&&(G.lastEpicNoteTime=r),o=o*s.AVG_UPDATE_RATE+E*(1-s.AVG_UPDATE_RATE),i=i*s.AVG_UPDATE_RATE+f*(1-s.AVG_UPDATE_RATE)}if(G.notes.length>0){const e=G.lastEpicNoteTime;if(G.notes=G.notes.filter(t=>t.time<e-.1||t.time===e),!G.notes.find(t=>t.time===e&&0===t.lane)){c&&G.notes.find(t=>t.time===e&&1===t.lane)||createNoteFromScan(e,0,!1,"beat")}c||G.notes.find(t=>t.time===e&&3===t.lane)||createNoteFromScan(e,3,!1,"beat")}}function createNoteFromScan(e,t,n,a){const o=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?GAME_CONFIG.SPEED.MOBILE_SCALE:1,i=G.scrollSpeed||1,l=GAME_CONFIG.SPEED.BASE_TRAVEL_TIME*o/i;G.notes.push({lane:t,time:e,spawnTime:e-l,type:a,hit:!1,missed:!1,isLong:n,isHolding:!1,endTime:n?e+.5:e})}async function analyzeBPM(){if(!G.mediaEl||!G.mediaEl.src)return GAME_CONFIG.AUDIO.DEFAULT_BPM;try{const e=await fetch(G.mediaEl.src),t=await e.arrayBuffer(),n=await actx.decodeAudioData(t);await preScanAudio(n);const a=n.getChannelData(0),o=n.sampleRate;let i=[],l=.3;for(let e=0;e<a.length&&e<60*o;e+=100)Math.abs(a[e])>l&&(i.push(e),e+=.2*o);if(i.length<2)return GAME_CONFIG.AUDIO.DEFAULT_BPM;let s=[];for(let e=1;e<i.length;e++)s.push(i[e]-i[e-1]);let c=60/(s.reduce((e,t)=>e+t)/s.length/o);for(;c<GAME_CONFIG.AUDIO.BPM_MIN;)c*=2;for(;c>GAME_CONFIG.AUDIO.BPM_MAX;)c/=2;return Math.round(c)}catch(e){return GAME_CONFIG.AUDIO.DEFAULT_BPM}}function analyzeAudio(e){if(!analyser||G.paused||!G.playing)return;if(G.lastEpicNoteTime>0&&e>G.lastEpicNoteTime+.1)return void[0,1,2,3].forEach(t=>{G.activeLongNotes[t]&&(G.activeLongNotes[t].endTime=e,G.activeLongNotes[t]=null)});const t=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),n=e=>{if(!t)return!1;return(0===e?[1]:1===e?[0,2]:2===e?[1,3]:[2]).some(e=>null!==G.activeLongNotes[e])};void 0===G.globalLastLNTime&&(G.globalLastLNTime=0),void 0===G.lnCooldown&&(G.lnCooldown=[0,0,0,0]),void 0===G.recentNoteCount&&(G.recentNoteCount=0,G.lastDensityUpdate=e),e-G.lastDensityUpdate>.5&&(G.recentNoteCount=Math.max(0,G.recentNoteCount-2),G.lastDensityUpdate=e);const a=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(a);let o=0,i=0;for(let e=2;e<10;e++)o+=a[e];o/=8;for(let e=12;e<160;e++)i+=a[e];i/=148,void 0===G.avgK&&(G.avgK=40,G.avgL=30,G.stair=1,G.lastS=0,G.laneT=[0,0,0,0]);const l=GAME_CONFIG.GENERATION,s=o-(G.prevK||0),c=i-(G.prevL||0);G.avgK=G.avgK*l.SMOOTHING+o*(1-l.SMOOTHING),G.avgL=G.avgL*l.SMOOTHING+i*(1-l.SMOOTHING);const r=60/G.bpm/4,d=e%r;if(d>l.GRID_SNAP&&d<r-l.GRID_SNAP)return G.prevK=o,void(G.prevL=i);if(e-G.lastS<l.MIN_COOLDOWN)return;const m=o/(G.avgK+1),u=i/(G.avgL+1);let E=!1,f=null;const T=1+.12*G.recentNoteCount,g=G.recentNoteCount<2?.7:1,p=l.SENSITIVITY.KICK.threshold*(1+.05*G.recentNoteCount),h=l.SENSITIVITY.LEAD.threshold*T*g;if((s>p||m>3)&&Math.random()<l.DENSITY_CONTROL.KICK_CHANCE){let t=s>35?0:3;e>G.laneT[t]+.15&&!n(t)&&(spawnNote(e,"beat",t),G.laneT[t]=e+.18,E=!0,G.recentNoteCount+=.5,f=t)}if((c>h||u>1.02)&&Math.random()<l.DENSITY_CONTROL.MELODY_CHANCE)if(t){let a=Math.random()<.1&&u>1.8;if(null!==f&&(a=!1),a){const t=[[0,3],[0,2],[1,3]],a=t[Math.floor(Math.random()*t.length)];let o=a[0],i=a[1];e>G.laneT[o]+.05&&e>G.laneT[i]+.05&&!n(o)&&!n(i)&&(spawnNote(e,"melody",o),G.laneT[o]=e+.1,spawnNote(e,"melody",i),G.laneT[i]=e+.1,G.recentNoteCount+=2,E=!0)}else{G.stair=1===G.stair?2:1;let a=G.stair;if(l.FLOW_RULES.ALLOW_OVERFLOW&&Math.random()<l.FLOW_RULES.OVERFLOW_CHANCE&&(a=1===a?0:3),null!==f&&a===f&&(a=0===a?1:3===a?2:(a+1)%4),t&&null!==f&&Math.abs(f-a)<=1);else if(e>G.laneT[a]+.08&&!n(a)){const t=spawnNote(e,"melody",a);G.laneT[a]=e+.1,E=!0,G.recentNoteCount++;const n=.75*(60/(G.bpm||120)),o=l.LONG_NOTE_RULES.STABILITY_REQUIRED*(G.avgL>100?.85:1),i=e>(G.lnCooldown[a]||0),s=e>G.globalLastLNTime+n;null===f&&u>o&&Math.random()<l.LONG_NOTE_RULES.CHANCE&&i&&s&&(t.maxLifeTime=e+1.2,G.activeLongNotes[a]=t,G.globalLastLNTime=e)}}}else{G.stair=1===G.stair?2:1;let t=G.stair;if(l.FLOW_RULES.ALLOW_OVERFLOW&&Math.random()<l.FLOW_RULES.OVERFLOW_CHANCE&&(t=1===t?0:3),e>G.laneT[t]+.08&&!n(t)){const a=spawnNote(e,"melody",t);G.laneT[t]=e+.1,E=!0,G.recentNoteCount++;let o=u>2.2?.016:.003;if(Math.random()<o){let a=0===t?3:3===t?0:1===t?2:1;e>G.laneT[a]+.05&&!n(a)&&(spawnNote(e,"melody",a),G.laneT[a]=e+.1,G.recentNoteCount++)}const i=.75*(60/(G.bpm||120)),s=l.LONG_NOTE_RULES.STABILITY_REQUIRED*(G.avgL>100?.85:1),c=e>(G.lnCooldown[t]||0),r=e>G.globalLastLNTime+i;G.recentNoteCount,l.LONG_NOTE_RULES.DENSITY_THRESHOLD;u>s&&Math.random()<l.LONG_NOTE_RULES.CHANCE&&c&&r&&(a.maxLifeTime=e+1.2,G.activeLongNotes[t]=a,G.globalLastLNTime=e)}}E&&(G.lastS=e),[0,1,2,3].forEach(n=>{let a=G.activeLongNotes[n];if(!a)return;let o=0===n||3===n?m:u;const i=GAME_CONFIG.SPEED.BASE_TRAVEL_TIME/(G.scrollSpeed||1);if(o>.85&&e<(a.maxLifeTime||e+1)){if(a.endTime=e+i+.2,a.isLong=!0,G.laneT[n]=a.endTime,t){(0===n?[1]:1===n?[0,2]:2===n?[1,3]:[2]).forEach(e=>G.laneT[e]=Math.max(G.laneT[e],a.endTime+.2))}}else G.lnCooldown[n]=e+1.5,G.activeLongNotes[n]=null}),G.prevK=o,G.prevL=i}function spawnNote(e,t,n=null){if(G.spawnFilterRate<1.05&&Math.random()>G.spawnFilterRate)return{isDummy:!0};let a=n;null===a&&(a="drum_heavy"===t?Math.random()>.5?0:3:Math.random()>.5?1:2);const o=G.scrollSpeed||1,i=GAME_CONFIG.SPEED.BASE_TRAVEL_TIME/o,l={lane:a,time:e+i+0,endTime:e+i+.35/o,hit:!1,missed:!1,isLong:!1,isHolding:!1,type:t,spawnTime:e};return G.notes.push(l),l}function loop(){if(!G.playing||G.paused)return;const e=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),t=performance.now();let n=(t-G.lastFrameTime)/1e3;(n>.1||n<0)&&(n=.016),G.lastFrameTime=t;const a=G.mediaEl.currentTime;Math.abs(a)<.01&&G.smoothTime>.1&&(G.smoothTime=0),Math.abs(G.smoothTime-a)>.2?G.smoothTime=a:(G.smoothTime+=n,G.smoothTime+=.1*(a-G.smoothTime));const o=G.smoothTime,i=60/G.bpm;o%i/i<.05&&(G.lineGlow=Math.max(G.lineGlow,.5));const l=G.mediaEl.duration;if(l>0&&(document.getElementById("song-progress-bar").style.width=o/l*100+"%"),G.isFever){if(G.fever<=0)endFeverEffect();else{let e=G.fever/100;const t=GAME_CONFIG.FEVER.FILTER_MIN_FREQ,n=t+(GAME_CONFIG.FEVER.FILTER_MAX_FREQ-t)*(1-e);feverFilter.frequency.setTargetAtTime(n,actx.currentTime,.05),G.fever-=GAME_CONFIG.FEVER.DRAIN_RATE}updateHUD()}if(o-G.lastAnalysisTime>.033&&(analyzeAudio(o),G.lastAnalysisTime=o),ctx.clearRect(0,0,cvs.width,cvs.height),G.isFever){ctx.save(),ctx.globalCompositeOperation="source-over";const e=ctx.createLinearGradient(0,JUDGE_Y,0,0);e.addColorStop(0,"rgba(255, 204, 0, 0.4)"),e.addColorStop(1,"rgba(255, 204, 0, 0)"),ctx.fillStyle=e,ctx.fillRect(0,0,cvs.width,JUDGE_Y),ctx.restore()}const s=G.isFever?GAME_CONFIG.SPEED.FEVER_ACCEL:1;void 0===G.speedLerp&&(G.speedLerp=s),G.speedLerp+=.05*(s-G.speedLerp),G.currentSpeed=G.baseSpeed*G.speedLerp*(G.scrollSpeed||1);const c=GAME_CONFIG.COLORS.LANE_WIDTH*SCALE_X;for(let t=G.notes.length-1;t>=0;t--){const n=G.notes[t];if(n.isDead)continue;const a=n.time-o;if(a>3||a<-1&&(!n.isLong||!n.isHolding))continue;const i=n.time-(o+G.audioOffset),l=(n.isLong?n.endTime:n.time)-(o+G.audioOffset);let s=JUDGE_Y-850*i*G.currentSpeed,r=JUDGE_Y-850*l*G.currentSpeed,d=1;if(n.hit&&!n.missed)if(n.isLong&&n.isHolding)s=JUDGE_Y;else{const e=.5,t=o-(n.hitTime||o);if(t>e){n.isDead=!0;continue}d=Math.pow(1-t/e,1.5),s=JUDGE_Y,r=s+(n.isLong?1e3*(n.endTime-n.time)*G.currentSpeed:0)}else n.missed&&(d=.2);ctx.globalAlpha=d;const m=GAME_CONFIG.COLORS.NOTE_LANES[n.lane];if(n.isLong&&r<cvs.height){let e=n.missed?.4:n.isHolding?.8+.2*Math.sin(.02*Date.now()):.9;ctx.globalAlpha=e,ctx.fillStyle=m,s>r&&ctx.fillRect(n.lane*c+5*SCALE_X,r,c-10*SCALE_X,s-r),ctx.globalAlpha=1}if(s>-100&&s<cvs.height+100&&(!n.isLong||!n.isHolding)){ctx.fillStyle=m;let t=1,a=15;if(n.hit&&!n.missed){const e=o-(n.hitTime||o);t=1+1.5*e,a=80*(1-e/.5)}n.missed||(e||(ctx.shadowBlur=a,ctx.shadowColor=n.hit?"#fff":m),n.hit&&(ctx.globalCompositeOperation="lighter"));const i=(c-10*SCALE_X)*t,l=GAME_CONFIG.COLORS.NOTE_HEIGHT*(n.hit?t:1),r=n.lane*c+(c-i)/2;ctx.fillRect(r,s-l/2,i,l),ctx.globalCompositeOperation="source-over",ctx.fillStyle="#fff",ctx.shadowBlur=0;const d=4*(n.hit?t:1);ctx.fillRect(r,s-d/2,i,d)}ctx.globalAlpha=1,ctx.shadowBlur=0,n.isLong&&n.isHolding&&o+G.audioOffset>n.endTime+GAME_CONFIG.JUDGEMENT.WINDOW_GOOD&&(n.isHolding=!1,n.missed=!0,triggerJudge("MISS",n.lane));l<(G.isFever?-.12:-.21)&&!n.hit&&(n.hit=!0,n.missed=!0,triggerJudge("MISS",n.lane)),r>cvs.height+150&&(n.isDead=!0)}ctx.save(),G.lineGlow*=.9;const r=20+60*G.lineGlow;ctx.fillStyle=G.lineGlow>.7?`rgb(255, ${50+100*G.lineGlow}, ${50+100*G.lineGlow})`:GAME_CONFIG.COLORS.NEON_RED,ctx.globalAlpha=.8,ctx.fillRect(0,JUDGE_Y-4,cvs.width,22),G.lineGlow>.4&&(ctx.fillStyle="#ffffff",ctx.globalAlpha=.5*G.lineGlow,e||(ctx.shadowBlur=1.2*r,ctx.shadowColor="#ffffff"),ctx.fillRect(0,JUDGE_Y-4,cvs.width,22)),ctx.restore(),drawFX(),G.animId=requestAnimationFrame(loop)}function drawFX(){ctx.save();const e=GAME_CONFIG.COLORS.LANE_WIDTH*SCALE_X,t=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);for(let t=0;t<4;t++)if(G.beams[t]>0){const n=.4*G.beams[t],a=ctx.createLinearGradient(0,JUDGE_Y,0,0);a.addColorStop(0,GAME_CONFIG.COLORS.NOTE_LANES[t]),a.addColorStop(1,"transparent"),ctx.fillStyle=a,ctx.globalAlpha=n,ctx.fillRect(t*e+5*SCALE_X,0,e-10*SCALE_X,JUDGE_Y),G.beams[t]*=.85,G.beams[t]<.01&&(G.beams[t]=0)}for(let e=G.particles.length-1;e>=0;e--){const n=G.particles[e];if(n.life-=.05,n.life<=0)G.particles.splice(e,1);else{if(n.isGlow&&!t){ctx.save(),ctx.translate(n.x||0,n.y||JUDGE_Y);const e=Math.max(.1,400*n.life*SCALE_X),t=ctx.createRadialGradient(0,0,0,0,0,e);t.addColorStop(0,"#ffffff"),t.addColorStop(.2,n.color),t.addColorStop(1,"transparent"),ctx.fillStyle=t,ctx.globalAlpha=.8*n.life,ctx.beginPath(),ctx.arc(0,0,e,0,2*Math.PI),ctx.fill(),ctx.restore()}n.isRing&&(ctx.beginPath(),ctx.arc(n.x,n.y,80*(1-n.life)*SCALE_X,0,2*Math.PI),ctx.strokeStyle=n.color,ctx.lineWidth=3*n.life,ctx.globalAlpha=.5*n.life,ctx.stroke()),n.isGlow||n.isRing||(n.x+=n.vx*SCALE_X,n.y+=n.vy,ctx.beginPath(),ctx.fillStyle=n.color,ctx.globalAlpha=n.life,ctx.arc(n.x,n.y,(n.size||2)*SCALE_X,0,2*Math.PI),ctx.fill())}}ctx.restore()}window.onresize=resizeCanvas,window.onload=resizeCanvas;const KEYS=["d","f","j","k"];function handleInputStart(e){if(-1===e)return;G.keysHeld[e]=!0;const t=document.getElementById(`k${e}`);if(t&&t.classList.add("active"),G.beams[e]=1,G.playing&&!G.paused){playSFX(G.isFever?"fever-hit":"hit");const t=G.mediaEl.currentTime,n=t+G.audioOffset,a=GAME_CONFIG.JUDGEMENT.HIT_DETECTION_RANGE,o=G.notes.find(t=>t.lane===e&&!t.hit&&!t.missed&&Math.abs(t.time-n)<=a);if(o){const a=Math.abs(o.time-n),i=GAME_CONFIG.JUDGEMENT;if(a>i.WINDOW_GOOD)o.hit=!0,o.missed=!0,triggerJudge("MISS",e);else if(o.hit=!0,o.hitTime=t,o.isLong)o.isHolding=!0;else{let t="GOOD";a<i.WINDOW_PERFECT?t="PERFECT":a<i.WINDOW_GREAT&&(t="GREAT"),triggerJudge(t,e)}}}}function handleInputEnd(e){if(-1!==e){G.keysHeld[e]=!1;const t=G.notes.find(t=>t.lane===e&&t.isLong&&t.isHolding);if(t){t.isHolding=!1;const n=G.mediaEl.currentTime,a=G.audioOffset,o=Math.abs(t.endTime-(n+a)),i=GAME_CONFIG.JUDGEMENT;o<i.WINDOW_PERFECT?triggerJudge("PERFECT",e):o<i.WINDOW_GREAT?triggerJudge("GREAT",e):o<i.WINDOW_GOOD||n>=t.endTime-.2?triggerJudge("GOOD",e):(t.missed=!0,t.time=G.mediaEl.currentTime,triggerJudge("MISS",e))}const n=document.getElementById(`k${e}`);n&&n.classList.remove("active")}}window.addEventListener("keydown",e=>{if(void 0!==actx&&"suspended"===actx.state&&actx.resume(),G.playing){const t=["Space"," ","d","f","j","k","D","F","J","K"];(t.includes(e.key)||t.includes(e.code))&&e.preventDefault()}if(e.repeat)return;"Escape"===e.key&&(G.paused?resumeGame():togglePause());handleInputStart(KEYS.indexOf(e.key.toLowerCase()))},{passive:!1}),window.onkeyup=e=>{handleInputEnd(KEYS.indexOf(e.key.toLowerCase()))};const touchStage=document.getElementById("gear-stage"),activeTouches={};function spawnExplosion(e,t){const n=t||GAME_CONFIG.COLORS.NOTE_LANES[e],a=GAME_CONFIG.COLORS.LANE_WIDTH*SCALE_X,o=e*a+a/2;G.particles.push({x:o,y:JUDGE_Y,isGlow:!0,life:1,color:n});const i=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),l=i?8:15;for(let t=0;t<l;t++)G.particles.push({x:e*a+a/2,y:JUDGE_Y,vx:20*(Math.random()-.5),vy:15*(Math.random()-1.2),life:1,color:n,size:3+2*Math.random(),decayRate:i?.08:.05});G.particles.push({x:e*a+a/2,y:JUDGE_Y,isRing:!0,life:1,color:n})}touchStage.addEventListener("touchstart",e=>{e.cancelable&&e.preventDefault();const t=touchStage.getBoundingClientRect();for(let n=0;n<e.changedTouches.length;n++){const a=e.changedTouches[n];if(a.clientY>t.top+.5*t.height){const e=a.clientX-t.left,n=Math.floor(e/t.width*4);n>=0&&n<=3&&(activeTouches[a.identifier]=n,handleInputStart(n))}}},{passive:!1}),touchStage.addEventListener("touchend",e=>{e.cancelable&&e.preventDefault();for(let t=0;t<e.changedTouches.length;t++){const n=e.changedTouches[t],a=activeTouches[n.identifier];void 0!==a&&(handleInputEnd(a),delete activeTouches[n.identifier])}},{passive:!1}),touchStage.addEventListener("touchcancel",e=>{e.cancelable&&e.preventDefault();for(let t=0;t<e.changedTouches.length;t++){const n=e.changedTouches[t],a=activeTouches[n.identifier];void 0!==a&&(handleInputEnd(a),delete activeTouches[n.identifier])}},{passive:!1});const JUDGE_COLORS={PERFECT:"#ffeb3b",GREAT:"#00f3ff",GOOD:"#4caf50",MISS:"#f44336"};function triggerJudge(e,t){const n=document.getElementById("judge-txt"),a=document.getElementById("combo-box"),o=document.getElementById("gear-stage"),i=document.getElementById("bg-container"),l=GAME_CONFIG.JUDGEMENT,s=JUDGE_COLORS[e]||"#ffffff";n.innerText=e,n.style.color=s,a.classList.add("show-combo"),G.comboTimer&&clearTimeout(G.comboTimer),G.comboTimer=setTimeout(()=>a.classList.remove("show-combo"),1500);const c=void 0!==t?t:0;if("MISS"===e){if(G.lineGlow=0,n.style.transform="scale(0.8)",setTimeout(()=>n.style.transform="scale(1)",100),o.style.transform="translateX(8px)",setTimeout(()=>o.style.transform="translateX(0)",50),G.combo=0,G.stats.miss++,G.hp=Math.max(0,G.hp-l.HP_LOSS_MISS),G.failEnabled&&G.hp<=0)return void finishGame(!1);G.isFever&&endFeverEffect()}else{G.lineGlow=1,spawnExplosion(c,s),n.style.transform="scale(1.5) skewX(-15deg)";const t="PERFECT"===e;o.style.transform=`translateY(${t?5:4}px)`,t&&(o.style.filter="brightness(1.2) contrast(1.1)",i&&(i.style.transform="scale(1.0)")),setTimeout(()=>{n.style.transform="scale(1) skewX(-10deg)",o.style.transform="translateY(0)",o.style.filter="none",i&&(i.style.transform="scale(1)")},50),G.combo++,G.stats[e.toLowerCase()]++,G.stats.maxCombo=Math.max(G.combo,G.stats.maxCombo),"PERFECT"===e?G.hp=Math.min(100,G.hp+l.HP_GAIN_PERFECT):"GREAT"===e?G.hp=Math.min(100,G.hp+l.HP_GAIN_GREAT):"GOOD"===e&&(G.hp=Math.min(100,G.hp+l.HP_GAIN_GOOD));let a="PERFECT"===e?l.SCORE_PERFECT:"GREAT"===e?l.SCORE_GREAT:l.SCORE_GOOD;G.score+=a*(G.isFever?GAME_CONFIG.FEVER.SCORE_MULTIPLIER:1),G.isFever||(G.fever=Math.min(GAME_CONFIG.FEVER.MAX_VALUE,G.fever+GAME_CONFIG.FEVER.GAIN_PER_HIT),G.fever>=GAME_CONFIG.FEVER.MAX_VALUE&&startFever())}updateHUD()}function startFever(){G.isFever=!0,updateHUD(),playSFX("fever-entry"),feverFilter.frequency.setTargetAtTime(800,actx.currentTime,.05),feverBassNode&&feverBassNode.gain.setTargetAtTime(GAME_CONFIG.FEVER.BASS_GAIN,actx.currentTime,.1),document.getElementById("gear-stage").classList.add("fever-mode-active"),document.getElementById("fever-txt").style.opacity=1}function endFeverEffect(){G.isFever=!1,G.fever=0,feverFilter.frequency.setTargetAtTime(GAME_CONFIG.FEVER.FILTER_MAX_FREQ,actx.currentTime,.1),feverBassNode&&feverBassNode.gain.setTargetAtTime(0,actx.currentTime,.1);const e=document.getElementById("gear-stage");e&&(e.classList.remove("fever-mode-active"),e.style.transform="scale(1.0)"),document.getElementById("fever-txt").style.opacity=0,updateHUD()}function updateHUD(){G.hp!==G.lastHudUpdate.hp&&(document.getElementById("hp-fill").style.height=G.hp+"%",G.lastHudUpdate.hp=G.hp),G.fever!==G.lastHudUpdate.fever&&(document.getElementById("fever-fill").style.height=G.fever+"%",G.lastHudUpdate.fever=G.fever),G.combo!==G.lastHudUpdate.combo&&(document.getElementById("combo-num").innerText=G.combo||"",G.lastHudUpdate.combo=G.combo)}const sfxBus=actx.createGain();function playSFX(e,t=1){const n=actx.currentTime;if("suspended"===actx.state&&actx.resume(),"hit"===e||"fever-hit"===e){const a=actx.createOscillator(),o=actx.createGain(),i="fever-hit"===e;a.type="triangle";const l=i?150:200,s=i?20:30,c=i?.2:.1;a.frequency.setValueAtTime(l,n),a.frequency.exponentialRampToValueAtTime(s,n+c),o.gain.setValueAtTime(.8*t,n),o.gain.exponentialRampToValueAtTime(.001,n+c),a.connect(o),o.connect(sfxBus),a.start(n),a.stop(n+c)}else if("fever-entry"===e){if(!noiseBuffer)return;const e=actx.createBufferSource();e.buffer=noiseBuffer;const t=actx.createBiquadFilter();t.type="lowpass",t.frequency.setValueAtTime(200,n),t.frequency.exponentialRampToValueAtTime(5e3,n+.8);const a=actx.createGain();a.gain.setValueAtTime(0,n),a.gain.linearRampToValueAtTime(1,n+.6),a.gain.linearRampToValueAtTime(0,n+1),e.connect(t),t.connect(a),a.connect(sfxBus),e.start(n);const o=document.getElementById("gear-stage");o&&(o.classList.add("fever-shake"),setTimeout(()=>o.classList.remove("fever-shake"),1e3))}}function playMenuImpact(){if(!actx)return;const e=actx.currentTime,t=actx.createOscillator(),n=actx.createGain();t.connect(n),n.connect(masterGainNode),t.type="triangle",t.frequency.setValueAtTime(150,e),t.frequency.exponentialRampToValueAtTime(.01,e+.3),n.gain.setValueAtTime(.5,e),n.gain.exponentialRampToValueAtTime(.01,e+.3),t.start(e),t.stop(e+.3)}function handleBoxClick(e,t){document.getElementById("inp-"+t).click()}async function loadMedia(e,t){if(!e)return;G.mediaEl&&(G.mediaEl.pause(),G.mediaEl.src="",G.mediaEl.load()),G.mediaEl=null;const n=document.getElementById("bg-video");n.style.opacity=0,n.src="",document.getElementById("box-audio").classList.remove("selected"),document.getElementById("box-video").classList.remove("selected"),document.getElementById("name-audio").innerText="Select File",document.getElementById("name-video").innerText="Select File",document.getElementById("inp-"+("audio"===t?"video":"audio")).value="","suspended"===actx.state&&await actx.resume();const a=URL.createObjectURL(e),o=document.getElementById("song-name-text");if(o&&(o.innerText=e.name.replace(/\.[^/.]+$/,"").toUpperCase()),document.getElementById("box-"+t).classList.add("selected"),document.getElementById("name-"+t).innerText=e.name,"video"===t)n.src=a,n.load(),n.style.opacity=1,G.mediaEl=n,G.mediaType="video";else{const e=new Audio;e.src=a,e.crossOrigin="anonymous",G.mediaEl=e,G.mediaType="audio"}try{const t=await e.arrayBuffer(),n=await actx.decodeAudioData(t);await preScanAudio(n),G.bpm=await analyzeBPM()}catch(e){console.error("解析失敗:",e),G.bpm=GAME_CONFIG.AUDIO.DEFAULT_BPM}G.mediaEl.loop=!1,G.mediaEl.addEventListener("ended",()=>{setTimeout(()=>{G.playing&&!G.paused&&finishGame(!0)},2500)}),document.getElementById("diff-opt").style.display="block"}async function preInitGame(e){const t=document.getElementById("difficulty-display");if(t&&(t.style.display="block",e<=.7?(t.innerText="EASY",t.style.color="var(--neon-blue)"):e<=1?(t.innerText="NORMAL",t.style.color="var(--neon-blue)"):(t.innerText="HARD",t.style.color="var(--neon-pink)")),document.activeElement instanceof HTMLElement&&document.activeElement.blur(),window.focus(),document.body.focus(),"suspended"===actx.state&&await actx.resume(),G.diff=e,G.failEnabled=document.getElementById("chk-fail").checked,G.bpm=await analyzeBPM(),G.spawnFilterRate=1.1,G.spawnFilterRate=e<=.7?G.bpm<115?.5:.6:e<=1?G.bpm<115?.7:.8:1.3,G.baseSpeed=G.bpm/120*1,feverBassNode=actx.createBiquadFilter(),feverBassNode.type="lowshelf",feverBassNode.frequency.value=200,feverBassNode.gain.value=0,mainSource)try{mainSource.disconnect()}catch(e){}try{"video"===G.mediaType?(G.videoSourceNode||(G.videoSourceNode=actx.createMediaElementSource(G.mediaEl)),mainSource=G.videoSourceNode):mainSource=actx.createMediaElementSource(G.mediaEl),mainSource.connect(analyser),analyser.connect(feverFilter),feverFilter.connect(feverBassNode),feverBassNode.connect(masterGainNode)}catch(e){}document.getElementById("menu-screen").classList.add("hidden"),"running"!==actx.state&&await actx.resume(),startCountdown()}function startCountdown(){"suspended"===actx.state&&actx.resume(),G.screen="COUNTDOWN",G.notes.forEach(e=>e.isDead=!0),G.notes=[],G.smoothTime=0,G.mediaEl&&(G.mediaEl.currentTime=0);const e=document.getElementById("cd-num");document.getElementById("cd-screen").classList.remove("hidden");const t=document.getElementById("menu-bgm");if(t){G.menuFadeTimer&&clearInterval(G.menuFadeTimer);let e=menuGainNode?menuGainNode.gain.value:t.volume,n=20;const a=setInterval(()=>{e=Math.max(0,e-.05),menuGainNode?menuGainNode.gain.value=e:t.volume=e,n--,(e<=0||n<=0)&&(menuGainNode?menuGainNode.gain.value=0:t.volume=0,t.pause(),t.currentTime=0,clearInterval(a))},30)}const n=setInterval(()=>{window.focus()},500);let a=3;e.innerText=a;let o=setInterval(()=>{if(a--,2===a){for(let e=0;e<30;e++)G.notes.push({lane:0,time:0,isDead:!0});playSFX("hit",.001)}1===a&&G.mediaEl&&(G.mediaEl.muted=!0,G.mediaEl.volume=0,G.mediaEl.play().then(()=>{setTimeout(()=>{G.mediaEl.pause(),G.mediaEl.currentTime=0,G.mediaEl.muted=!1,G.mediaEl.volume=1},400)}).catch(e=>{})),a>0?e.innerText=a:0===a?e.innerText="GO!":(clearInterval(o),clearInterval(n),document.getElementById("cd-screen").classList.add("hidden"),window.focus(),document.activeElement&&document.activeElement.blur(),document.body.focus(),initGameValues(),setTimeout(()=>{startGame()},50))},1e3)}function initGameValues(){G.hp=100,G.score=0,G.combo=0,G.maxCombo=0,G.fever=0,G.isFever=!1,G.playing=!1,G.notes=[],G.keysHeld=[!1,!1,!1,!1],G.activeLongNotes=[null,null,null,null],G.lastS=0,G.laneT=[0,0,0,0],G.laneEndTime=[0,0,0,0],G.lnCooldown=[0,0,0,0],G.recentNoteCount=0,G.lastDensityUpdate=0,G.particles=[],G.beams=[0,0,0,0],G.stats={perfect:0,great:0,good:0,miss:0,maxCombo:0},G.avgK=40,G.avgL=30,G.smoothTime=0,G.lastFrameTime=0,G.lastAnalysisTime=0,G.lastHudUpdate={hp:-1,fever:-1,combo:-1},G.speedLerp=1,updateHUD(),document.getElementById("gear-stage").classList.remove("fever-mode-active"),document.getElementById("fever-txt").style.opacity=0;const e=document.getElementById("combo-box");e&&e.classList.remove("show-combo")}function startGame(){G.screen="PLAYING",G.playing=!0,G.paused=!1,resizeCanvas(),G.mediaEl.currentTime>0&&(G.mediaEl.currentTime=0),G.smoothTime=0,G.lastFrameTime=performance.now(),G.mediaEl.muted=!1,G.mediaEl.play().catch(e=>console.log("Auto-play blocked")),loop()}function togglePause(){"PLAYING"!==G.screen&&"PAUSED"!==G.screen||G.paused||(G.paused=!0,G.mediaEl.pause(),cancelAnimationFrame(G.animId),document.getElementById("pause-screen").classList.remove("hidden"))}function resumeGame(){document.getElementById("pause-screen").classList.add("hidden");const e=document.getElementById("cd-screen"),t=document.getElementById("cd-num");e.classList.remove("hidden"),e.style.background="rgba(0,0,0,0.5)",e.style.backdropFilter="blur(2px)",e.style.webkitBackdropFilter="blur(2px)";let n=3;t.innerText=n;const a=setInterval(()=>{n--,n>0?t.innerText=n:(clearInterval(a),e.classList.add("hidden"),e.style.background="",e.style.backdropFilter="",e.style.webkitBackdropFilter="",G.paused=!1,G.mediaEl.play(),G.lastFrameTime=performance.now(),G.smoothTime=G.mediaEl.currentTime,loop())},1e3)}function retryGame(){G.paused=!1,cancelAnimationFrame(G.animId),G.mediaEl&&(G.mediaEl.pause(),G.mediaEl.currentTime=0),stopResultMusic(),initGameValues(),document.getElementById("pause-screen").classList.add("hidden"),document.getElementById("result-screen").classList.add("hidden"),window.focus(),document.activeElement&&document.activeElement.blur(),startCountdown()}function backToMenu(){G.playing=!1,G.paused=!1,cancelAnimationFrame(G.animId),G.mediaEl&&(G.mediaEl.pause(),G.mediaEl.currentTime=0),stopResultMusic(),initGameValues(),document.getElementById("pause-screen").classList.add("hidden"),document.getElementById("result-screen").classList.add("hidden"),document.getElementById("cd-screen").classList.add("hidden"),document.getElementById("gear-stage").classList.remove("fever-mode-active"),document.getElementById("diff-opt").style.display="none",document.getElementById("box-audio").classList.remove("selected"),document.getElementById("box-video").classList.remove("selected"),document.getElementById("name-audio").innerText="Select File",document.getElementById("name-video").innerText="Select File",document.getElementById("inp-audio").value="",document.getElementById("inp-video").value="",G.screen="MENU",document.getElementById("menu-screen").classList.remove("hidden"),document.getElementById("start-overlay").style.display="none",document.getElementById("menu-main-content").style.visibility="visible",tryPlayMenuBgm()}function playResultMusicRobust(e){const t=e?document.getElementById("bgm-clear"):document.getElementById("bgm-fail");let n=null;if(e?(clearSource||(clearSource=actx.createMediaElementSource(t),clearGain=actx.createGain(),clearSource.connect(clearGain),clearGain.connect(masterGainNode)),n=clearGain):(failSource||(failSource=actx.createMediaElementSource(t),failGain=actx.createGain(),failSource.connect(failGain),failGain.connect(masterGainNode)),n=failGain),n){n.gain.setValueAtTime(0,actx.currentTime),t.currentTime=0,t.loop=!0,t.load();const e=t.play();void 0!==e&&e.then(()=>{let e=0;resultFadeTimer&&clearInterval(resultFadeTimer),resultFadeTimer=setInterval(()=>{e+=.02,e>=.4?(n.gain.value=.4,clearInterval(resultFadeTimer)):n.gain.value=e},50)}).catch(e=>console.error(e))}}function stopResultMusic(){resultFadeTimer&&clearInterval(resultFadeTimer);const e=document.getElementById("bgm-clear"),t=document.getElementById("bgm-fail");e&&(e.pause(),e.currentTime=0),t&&(t.pause(),t.currentTime=0)}function finishGame(e){G.playing=!1,G.screen="RESULT",cancelAnimationFrame(G.animId),G.mediaEl.pause(),playResultMusicRobust(e);document.getElementById("result-screen").classList.remove("hidden");const t=document.getElementById("res-rank"),n=document.getElementById("res-title"),a=document.getElementById("res-fc");a&&a.classList.add("hidden"),document.getElementById("st-perf").innerText=G.stats.perfect,document.getElementById("st-great").innerText=G.stats.great,document.getElementById("st-good").innerText=G.stats.good,document.getElementById("st-miss").innerText=G.stats.miss,document.getElementById("res-score").innerText=Math.floor(G.score);const o=G.stats.perfect+G.stats.great+G.stats.good+G.stats.miss;if(o>0&&(updateStatBar("bar-perf",G.stats.perfect,o),updateStatBar("bar-great",G.stats.great,o),updateStatBar("bar-good",G.stats.good,o),updateStatBar("bar-miss",G.stats.miss,o)),e){n.innerText="STAGE CLEAR";let e=1*G.stats.perfect+.7*G.stats.great+.3*G.stats.good,i=o>0?e/o:0;t.style.textShadow="0 0 20px currentColor",i>=.99?(t.innerText="SSS",t.style.color="#ffffff",t.style.textShadow="0 0 20px #fff, 0 0 40px #ffcc00"):i>=.96?(t.innerText="SS",t.style.color="#ffcc00",t.style.textShadow="0 0 15px #ffcc00, 0 0 5px #000"):i>=.9?(t.innerText="S",t.style.color="#00f3ff",t.style.textShadow="0 0 10px #00f3ff"):i>=.8?(t.innerText="A",t.style.color="#00ff00",t.style.textShadow="0 0 10px #00ff00"):i>=.7?(t.innerText="B",t.style.color="#ffff00",t.style.textShadow="none"):i>=.6?(t.innerText="C",t.style.color="#ffaa00",t.style.textShadow="none"):(t.innerText="D",t.style.color="#888888",t.style.textShadow="none"),0===G.stats.miss&&o>0&&a&&a.classList.remove("hidden")}else n.innerText="GAME OVER",t.innerText="F",t.style.color="#ff3333";const i=document.getElementById("difficulty-display");i&&(i.style.display="none")}function updateStatBar(e,t,n){const a=document.getElementById(e);a&&(a.style.width=t/n*100+"%")}function changeSpeed(e){const t=GAME_CONFIG.SPEED.OPTIONS;G.scrollSpeedIndex+=e,G.scrollSpeedIndex<0&&(G.scrollSpeedIndex=0),G.scrollSpeedIndex>=t.length&&(G.scrollSpeedIndex=t.length-1),G.scrollSpeed=t[G.scrollSpeedIndex];const n=document.getElementById("speed-display");n&&(n.innerText=G.scrollSpeed.toFixed(2)+"x")}function tryPlayMenuBgm(){const e=document.getElementById("menu-bgm");if(e&&"MENU"===G.screen){const t=.24;menuGainNode||(menuSource=actx.createMediaElementSource(e),menuGainNode=actx.createGain(),menuSource.connect(menuGainNode),menuGainNode.connect(masterGainNode)),G.menuFadeTimer&&clearInterval(G.menuFadeTimer),menuGainNode.gain.setValueAtTime(0,actx.currentTime),e.loop=!0;const n=e.play();void 0!==n&&n.then(()=>{G.menuFadeTimer=setInterval(()=>{let e=menuGainNode.gain.value;e<t?menuGainNode.gain.value=Math.min(t,e+.02):clearInterval(G.menuFadeTimer)},100)}).catch(e=>{})}}sfxBus.connect(masterGainNode),document.addEventListener("DOMContentLoaded",()=>{const e=document.getElementById("start-overlay"),t=document.getElementById("menu-main-content"),n=(document.getElementById("menu-bgm"),/iPad|iPhone|iPod|android|webOS/i.test(navigator.userAgent)||"MacIntel"===navigator.platform&&navigator.maxTouchPoints,document.getElementById("volume-slider")),a=document.getElementById("volume-display");n.addEventListener("input",e=>{const t=parseFloat(e.target.value);G.volume=t,masterGainNode.gain.cancelScheduledValues(actx.currentTime),masterGainNode.gain.linearRampToValueAtTime(t,actx.currentTime+.05),a.innerText=Math.round(100*t)+"%"}),e&&(e.onclick=()=>{e.style.display="none",t.style.visibility="visible","suspended"===actx.state&&actx.resume(),tryPlayMenuBgm()})});
+const GAME_CONFIG={COLORS:{NOTE_LANES:["#ff0055","#ffffff","#ffffff","#ff0055"],NEON_BLUE:"#00f3ff",NEON_GOLD:"#ffcc00",NEON_RED:"#ff3333",LANE_WIDTH:130,NOTE_HEIGHT:22,HIT_SCALE:5},JUDGEMENT:{WINDOW_PERFECT:.05,WINDOW_GREAT:.1,WINDOW_GOOD:.16,HIT_DETECTION_RANGE:.35,SCORE_PERFECT:500,SCORE_GREAT:300,SCORE_GOOD:100,HP_GAIN_PERFECT:1.5,HP_GAIN_GREAT:1,HP_GAIN_GOOD:.5,HP_LOSS_MISS:5,RELEASE_BUFFER:.2},SPEED:{BASE_TRAVEL_TIME:1.2,OPTIONS:[.75,1,1.25,1.5,1.75,2],FEVER_ACCEL:1.15,MOBILE_SCALE:1.35},GENERATION:{GRID_SNAP:.09,MIN_COOLDOWN:.14,SMOOTHING:.96,PRESCAN_MIN_GAP:.12,DENSITY_CONTROL:{GLOBAL_LIMIT:1,KICK_CHANCE:1,MELODY_CHANCE:.7},LONG_NOTE_RULES:{CHANCE:.2,STABILITY_REQUIRED:1.3,DENSITY_THRESHOLD:3},FLOW_RULES:{ALLOW_OVERFLOW:!0,OVERFLOW_CHANCE:.4,STAIR_STEP:1},SENSITIVITY:{KICK:{threshold:3.5,multiplier:1.4,longNoteProb:.3,min_gap:.15},LEAD:{threshold:1.5,multiplier:1.1,longNoteProb:.45,min_gap:.1},AVG_UPDATE_RATE:.985}},AUDIO:{BPM_MIN:80,BPM_MAX:170,DEFAULT_BPM:120,FFT_SIZE:1024},FEVER:{MAX_VALUE:100,GAIN_PER_HIT:1.2,DRAIN_RATE:100/720,SCORE_MULTIPLIER:2,FILTER_MIN_FREQ:3e3,FILTER_MAX_FREQ:22e3,BASS_GAIN:6}},AudioContext=window.AudioContext||window.webkitAudioContext,actx=new AudioContext,analyser=actx.createAnalyser();analyser.fftSize=GAME_CONFIG.AUDIO.FFT_SIZE;const masterGainNode=actx.createGain();masterGainNode.gain.value=.4,masterGainNode.connect(actx.destination);let mainSource=null,menuGainNode=null,menuSource=null,resultSource=null,resultGainNode=null,resultFadeTimer=null,clearSource=null,clearGain=null,failSource=null,failGain=null,feverBassNode=null,feverFilter=actx.createBiquadFilter();feverFilter.type="lowpass",feverFilter.frequency.value=GAME_CONFIG.FEVER.FILTER_MAX_FREQ;let noiseBuffer=null;function createNoiseBuffer(){const e=2*actx.sampleRate,t=actx.createBuffer(1,e,actx.sampleRate),n=t.getChannelData(0);for(let t=0;t<e;t++)n[t]=2*Math.random()-1;noiseBuffer=t}createNoiseBuffer();let G={screen:"MENU",mediaEl:null,mediaType:"none",playing:!1,paused:!1,animId:null,failEnabled:!0,hp:100,score:0,combo:0,maxCombo:0,fever:0,isFever:!1,feverTimer:null,stats:{perfect:0,great:0,good:0,miss:0,maxCombo:0},notes:[],particles:[],beams:[0,0,0,0],diff:1,baseSpeed:1,currentSpeed:1,scrollSpeedIndex:1,scrollSpeed:1,bpm:120,beatPoints:[],laneEndTime:[0,0,0,0],lastSpawn:0,energyAvg:0,avgLow:60,avgMid:50,prevLow:0,prevMid:0,activeLongNotes:[null,null,null,null],keysHeld:[!1,!1,!1,!1],lineGlow:0,comboTimer:null,audioOffset:.075,lastLane:-1,consecutiveMelody:0,density:0,isResting:!1,smoothTime:0,lastFrameTime:0,menuFadeTimer:null,lastAnalysisTime:0,lastHudUpdate:{hp:-1,fever:-1,combo:-1},volume:.4,videoSourceNode:null};const cvs=document.getElementById("gameCanvas"),ctx=cvs.getContext("2d");let CH=window.innerHeight,CW=window.innerWidth,SCALE_X=1,JUDGE_Y=.84*CH;function resizeCanvas(){const e=document.getElementById("gear-stage");e&&(CW=e.clientWidth,CH=e.clientHeight,cvs.width=CW,cvs.height=CH,CW<520?(SCALE_X=CW/520,JUDGE_Y=.8*CH):(SCALE_X=1,JUDGE_Y=.84*CH))}async function preScanAudio(e){G.notes=[],G.laneEndTime=[0,0,0,0],G.lastEpicNoteTime=0;const t=e.getChannelData(0),n=e.sampleRate,a=e.duration-2.5;let i=.2,o=.2;const l=GAME_CONFIG.GENERATION.PRESCAN_MIN_GAP||.12,s=GAME_CONFIG.GENERATION.SENSITIVITY,r=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);for(let e=0;e<t.length;e+=Math.floor(.01*n)){const c=e/n;if(c>a)break;let d=0,m=0,u=1024;for(let n=0;n<u&&e+n<t.length;n++){const a=Math.abs(t[e+n]||0);d+=a,m+=Math.abs(a-Math.abs(t[e+n-1]||0))}const E=d/u,f=m/u;let T=[],g=!1,p=0;if(r&&(G.laneEndTime[0]>c&&p++,G.laneEndTime[1]>c&&p++,G.laneEndTime[2]>c&&p++,G.laneEndTime[3]>c&&p++),E>s.KICK.threshold/100&&E>i*s.KICK.multiplier){let e=Math.random()>.5?0:3;const t=Math.random()<s.KICK.longNoteProb&&c+1<a;let n=!0;if(r&&(0===e&&T.includes(1)&&(n=!1),3===e&&T.includes(2)&&(n=!1),0===e&&G.laneEndTime[1]>c&&(n=!1),3===e&&G.laneEndTime[2]>c&&(n=!1),p>=2&&(n=!1)),n&&c>G.laneEndTime[e]+l){createNoteFromScan(c,e,t,"beat");let n=c+(t?.5:.2);G.laneEndTime[e]=n,r&&(0===e&&(G.laneEndTime[1]=Math.max(G.laneEndTime[1],n+.05)),3===e&&(G.laneEndTime[2]=Math.max(G.laneEndTime[2],n+.05)),T.push(e)),g=!0,p++}}if(f>s.LEAD.threshold/100&&f>o*s.LEAD.multiplier){let e=Math.random()>.5?1:2;const t=Math.random()<s.LEAD.longNoteProb&&c+.5<a;let n=!0;if(r&&(p>=2&&(n=!1),T.some(t=>Math.abs(t-e)<=1)&&(n=!1),1===e&&(G.laneEndTime[0]>c||G.laneEndTime[2]>c)&&(n=!1),2===e&&(G.laneEndTime[1]>c||G.laneEndTime[3]>c)&&(n=!1)),n&&c>G.laneEndTime[e]+l){createNoteFromScan(c,e,t,"melody");let n=c+(t?.5:.2);G.laneEndTime[e]=n,r&&(1===e&&(G.laneEndTime[0]=Math.max(G.laneEndTime[0],n+.05),G.laneEndTime[2]=Math.max(G.laneEndTime[2],n+.05)),2===e&&(G.laneEndTime[1]=Math.max(G.laneEndTime[1],n+.05),G.laneEndTime[3]=Math.max(G.laneEndTime[3],n+.05)),T.push(e)),g=!0,p++}}g&&(G.lastEpicNoteTime=c),i=i*s.AVG_UPDATE_RATE+E*(1-s.AVG_UPDATE_RATE),o=o*s.AVG_UPDATE_RATE+f*(1-s.AVG_UPDATE_RATE)}if(G.notes.length>0){const e=G.lastEpicNoteTime;if(G.notes=G.notes.filter(t=>t.time<e-.1||t.time===e),!G.notes.find(t=>t.time===e&&0===t.lane)){r&&G.notes.find(t=>t.time===e&&1===t.lane)||createNoteFromScan(e,0,!1,"beat")}r||G.notes.find(t=>t.time===e&&3===t.lane)||createNoteFromScan(e,3,!1,"beat")}}function createNoteFromScan(e,t,n,a){const i=6*(/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent)?GAME_CONFIG.SPEED.MOBILE_SCALE:1);G.notes.push({lane:t,time:e,spawnTime:e-i,type:a,hit:!1,missed:!1,isLong:n,isHolding:!1,endTime:n?e+.5:e})}async function analyzeBPM(){if(!G.mediaEl||!G.mediaEl.src)return GAME_CONFIG.AUDIO.DEFAULT_BPM;try{const e=await fetch(G.mediaEl.src),t=await e.arrayBuffer(),n=await actx.decodeAudioData(t);await preScanAudio(n);const a=n.getChannelData(0),i=n.sampleRate;let o=[],l=.3;for(let e=0;e<a.length&&e<60*i;e+=100)Math.abs(a[e])>l&&(o.push(e),e+=.2*i);if(o.length<2)return GAME_CONFIG.AUDIO.DEFAULT_BPM;let s=[];for(let e=1;e<o.length;e++)s.push(o[e]-o[e-1]);let r=60/(s.reduce((e,t)=>e+t)/s.length/i);for(;r<GAME_CONFIG.AUDIO.BPM_MIN;)r*=2;for(;r>GAME_CONFIG.AUDIO.BPM_MAX;)r/=2;return Math.round(r)}catch(e){return GAME_CONFIG.AUDIO.DEFAULT_BPM}}function analyzeAudio(e){if(!analyser||G.paused||!G.playing)return;if(G.lastEpicNoteTime>0&&e>G.lastEpicNoteTime+.1)return void[0,1,2,3].forEach(t=>{G.activeLongNotes[t]&&(G.activeLongNotes[t].endTime=e,G.activeLongNotes[t]=null)});const t=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),n=e=>{if(!t)return!1;return(0===e?[1]:1===e?[0,2]:2===e?[1,3]:[2]).some(e=>null!==G.activeLongNotes[e])};void 0===G.globalLastLNTime&&(G.globalLastLNTime=0),void 0===G.lnCooldown&&(G.lnCooldown=[0,0,0,0]),void 0===G.recentNoteCount&&(G.recentNoteCount=0,G.lastDensityUpdate=e),e-G.lastDensityUpdate>.5&&(G.recentNoteCount=Math.max(0,G.recentNoteCount-2),G.lastDensityUpdate=e);const a=new Uint8Array(analyser.frequencyBinCount);analyser.getByteFrequencyData(a);let i=0,o=0;for(let e=2;e<10;e++)i+=a[e];i/=8;for(let e=12;e<160;e++)o+=a[e];o/=148,void 0===G.avgK&&(G.avgK=40,G.avgL=30,G.stair=1,G.lastS=0,G.laneT=[0,0,0,0]);const l=GAME_CONFIG.GENERATION,s=i-(G.prevK||0),r=o-(G.prevL||0);G.avgK=G.avgK*l.SMOOTHING+i*(1-l.SMOOTHING),G.avgL=G.avgL*l.SMOOTHING+o*(1-l.SMOOTHING);const c=60/G.bpm/4,d=e%c;if(d>l.GRID_SNAP&&d<c-l.GRID_SNAP)return G.prevK=i,void(G.prevL=o);if(e-G.lastS<l.MIN_COOLDOWN)return;const m=i/(G.avgK+1),u=o/(G.avgL+1);let E=!1,f=null;const T=1+.12*G.recentNoteCount,g=G.recentNoteCount<2?.7:1,p=l.SENSITIVITY.KICK.threshold*(1+.05*G.recentNoteCount),h=l.SENSITIVITY.LEAD.threshold*T*g;if((s>p||m>3)&&Math.random()<l.DENSITY_CONTROL.KICK_CHANCE){let t=s>35?0:3;e>G.laneT[t]+.15&&!n(t)&&(spawnNote(e,"beat",t),G.laneT[t]=e+.18,E=!0,G.recentNoteCount+=.5,f=t)}if((r>h||u>1.02)&&Math.random()<l.DENSITY_CONTROL.MELODY_CHANCE)if(t){let a=Math.random()<.1&&u>1.8;if(null!==f&&(a=!1),a){const t=[[0,3],[0,2],[1,3]],a=t[Math.floor(Math.random()*t.length)];let i=a[0],o=a[1];e>G.laneT[i]+.05&&e>G.laneT[o]+.05&&!n(i)&&!n(o)&&(spawnNote(e,"melody",i),G.laneT[i]=e+.1,spawnNote(e,"melody",o),G.laneT[o]=e+.1,G.recentNoteCount+=2,E=!0)}else{G.stair=1===G.stair?2:1;let a=G.stair;if(l.FLOW_RULES.ALLOW_OVERFLOW&&Math.random()<l.FLOW_RULES.OVERFLOW_CHANCE&&(a=1===a?0:3),null!==f&&a===f&&(a=0===a?1:3===a?2:(a+1)%4),t&&null!==f&&Math.abs(f-a)<=1);else if(e>G.laneT[a]+.08&&!n(a)){const t=spawnNote(e,"melody",a);G.laneT[a]=e+.1,E=!0,G.recentNoteCount++;const n=.75*(60/(G.bpm||120)),i=l.LONG_NOTE_RULES.STABILITY_REQUIRED*(G.avgL>100?.85:1),o=e>(G.lnCooldown[a]||0),s=e>G.globalLastLNTime+n;null===f&&u>i&&Math.random()<l.LONG_NOTE_RULES.CHANCE&&o&&s&&(t.maxLifeTime=e+1.2,G.activeLongNotes[a]=t,G.globalLastLNTime=e)}}}else{G.stair=1===G.stair?2:1;let t=G.stair;if(l.FLOW_RULES.ALLOW_OVERFLOW&&Math.random()<l.FLOW_RULES.OVERFLOW_CHANCE&&(t=1===t?0:3),e>G.laneT[t]+.08&&!n(t)){const a=spawnNote(e,"melody",t);G.laneT[t]=e+.1,E=!0,G.recentNoteCount++;let i=u>2.2?.016:.003;if(Math.random()<i){let a=0===t?3:3===t?0:1===t?2:1;e>G.laneT[a]+.05&&!n(a)&&(spawnNote(e,"melody",a),G.laneT[a]=e+.1,G.recentNoteCount++)}const o=.75*(60/(G.bpm||120)),s=l.LONG_NOTE_RULES.STABILITY_REQUIRED*(G.avgL>100?.85:1),r=e>(G.lnCooldown[t]||0),c=e>G.globalLastLNTime+o;u>s&&Math.random()<l.LONG_NOTE_RULES.CHANCE&&r&&c&&(a.maxLifeTime=e+1.2,G.activeLongNotes[t]=a,G.globalLastLNTime=e)}}E&&(G.lastS=e),[0,1,2,3].forEach(n=>{let a=G.activeLongNotes[n];if(!a)return;let i=0===n||3===n?m:u;const o=GAME_CONFIG.SPEED.BASE_TRAVEL_TIME/(G.scrollSpeed||1);if(i>.85&&e<(a.maxLifeTime||e+1)){if(a.endTime=e+o+.2,a.isLong=!0,G.laneT[n]=a.endTime,t){(0===n?[1]:1===n?[0,2]:2===n?[1,3]:[2]).forEach(e=>G.laneT[e]=Math.max(G.laneT[e],a.endTime+.2))}}else G.lnCooldown[n]=e+1.5,G.activeLongNotes[n]=null}),G.prevK=i,G.prevL=o}function spawnNote(e,t,n=null){if(G.spawnFilterRate<1.05&&Math.random()>G.spawnFilterRate)return{isDummy:!0};let a=n;null===a&&(a="drum_heavy"===t?Math.random()>.5?0:3:Math.random()>.5?1:2);G.scrollSpeed;const i={lane:a,time:e+3,endTime:e+3+.2,hit:!1,missed:!1,isLong:!1,type:t,spawnTime:e};return G.notes.push(i),i}function loop(){if(!G.playing||G.paused)return;const e=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),t=performance.now();let n=(t-G.lastFrameTime)/1e3;(n>.1||n<0)&&(n=.016),G.lastFrameTime=t;const a=G.mediaEl.currentTime;Math.abs(a)<.01&&G.smoothTime>.1&&(G.smoothTime=0),Math.abs(G.smoothTime-a)>.2?G.smoothTime=a:(G.smoothTime+=n,G.smoothTime+=.1*(a-G.smoothTime));const i=G.smoothTime,o=60/G.bpm;i%o/o<.05&&(G.lineGlow=Math.max(G.lineGlow,.5));const l=G.mediaEl.duration;if(l>0&&(document.getElementById("song-progress-bar").style.width=i/l*100+"%"),G.isFever){if(G.fever<=0)endFeverEffect();else{let e=G.fever/100;const t=GAME_CONFIG.FEVER.FILTER_MIN_FREQ,n=t+(GAME_CONFIG.FEVER.FILTER_MAX_FREQ-t)*(1-e);feverFilter.frequency.setTargetAtTime(n,actx.currentTime,.05),G.fever-=GAME_CONFIG.FEVER.DRAIN_RATE}updateHUD()}i-G.lastAnalysisTime>.033&&(analyzeAudio(i),G.lastAnalysisTime=i),ctx.clearRect(0,0,cvs.width,cvs.height);const s=G.isFever?GAME_CONFIG.SPEED.FEVER_ACCEL:1;void 0===G.speedLerp&&(G.speedLerp=s),G.speedLerp+=.05*(s-G.speedLerp),G.currentSpeed=G.baseSpeed*G.speedLerp*(G.scrollSpeed||1),G.currentSpeed*=.85;const r=GAME_CONFIG.COLORS.LANE_WIDTH*SCALE_X,c=JUDGE_Y/(1e3*G.currentSpeed)+1;if(G.isFever){ctx.save(),ctx.globalCompositeOperation="source-over";const e=ctx.createLinearGradient(0,JUDGE_Y,0,0);e.addColorStop(0,"rgba(255, 204, 0, 0.4)"),e.addColorStop(1,"rgba(255, 204, 0, 0)"),ctx.fillStyle=e,ctx.fillRect(0,0,cvs.width,JUDGE_Y),ctx.restore()}for(let t=G.notes.length-1;t>=0;t--){const n=G.notes[t];if(n.isDead)continue;const a=n.time-i;if((n.isLong?n.endTime:n.time)-i>c)continue;if(a<-1&&(!n.isLong||!n.isHolding))continue;const o=n.time-(i+G.audioOffset),l=(n.isLong?n.endTime:n.time)-(i+G.audioOffset);let s=JUDGE_Y-1e3*o*G.currentSpeed,d=JUDGE_Y-1e3*l*G.currentSpeed,m=1;if(n.hit&&!n.missed)if(n.isLong&&n.isHolding)s=JUDGE_Y;else{const e=.5,t=i-(n.hitTime||i);if(t>e){n.isDead=!0;continue}m=Math.pow(1-t/e,1.5),s=JUDGE_Y,d=s+(n.isLong?1e3*(n.endTime-n.time)*G.currentSpeed:0)}else n.missed&&(m=.2);ctx.globalAlpha=m;const u=GAME_CONFIG.COLORS.NOTE_LANES[n.lane];if(n.isLong&&s>-2e3&&d<cvs.height+500){let e=n.missed?.4:n.isHolding?.8+.2*Math.sin(.02*Date.now()):.9;ctx.save(),ctx.globalAlpha=m*e,ctx.fillStyle=u,s>d&&ctx.fillRect(n.lane*r+5*SCALE_X,d,r-10*SCALE_X,s-d),ctx.restore()}if(s>-3e3&&s<cvs.height+200&&(!n.isLong||!n.isHolding)){ctx.save(),ctx.fillStyle=u;let t=1,a=15;if(n.hit&&!n.missed){const e=i-(n.hitTime||i);t=1+1.5*e,a=80*(1-e/.5)}n.missed||(e||(ctx.shadowBlur=a,ctx.shadowColor=n.hit?"#fff":u),n.hit&&(ctx.globalCompositeOperation="lighter"));const o=(r-10*SCALE_X)*t,l=GAME_CONFIG.COLORS.NOTE_HEIGHT*(n.hit?t:1),c=n.lane*r+(r-o)/2;ctx.fillRect(c,s-l/2,o,l),ctx.globalCompositeOperation="source-over",ctx.fillStyle="#fff",ctx.shadowBlur=0;const d=4*(n.hit?t:1);ctx.fillRect(c,s-d/2,o,d),ctx.restore()}n.isLong&&n.isHolding&&i+G.audioOffset>n.endTime+GAME_CONFIG.JUDGEMENT.WINDOW_GOOD&&(n.isHolding=!1,n.missed=!0,triggerJudge("MISS",n.lane));l<(G.isFever?-.12:-.21)&&!n.hit&&(n.hit=!0,n.missed=!0,triggerJudge("MISS",n.lane)),d>cvs.height+150&&(n.isDead=!0)}ctx.save(),G.lineGlow*=.9;const d=20+60*G.lineGlow;ctx.fillStyle=G.lineGlow>.7?`rgb(255, ${50+100*G.lineGlow}, ${50+100*G.lineGlow})`:GAME_CONFIG.COLORS.NEON_RED,ctx.globalAlpha=.8,ctx.fillRect(0,JUDGE_Y-4,cvs.width,22),G.lineGlow>.4&&(ctx.fillStyle="#ffffff",ctx.globalAlpha=.5*G.lineGlow,e||(ctx.shadowBlur=1.2*d,ctx.shadowColor="#ffffff"),ctx.fillRect(0,JUDGE_Y-4,cvs.width,22)),ctx.restore(),drawFX(),G.animId=requestAnimationFrame(loop)}function drawFX(){ctx.save();const e=GAME_CONFIG.COLORS.LANE_WIDTH*SCALE_X,t=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);for(let t=0;t<4;t++)if(G.beams[t]>0){const n=.4*G.beams[t],a=ctx.createLinearGradient(0,JUDGE_Y,0,0);a.addColorStop(0,GAME_CONFIG.COLORS.NOTE_LANES[t]),a.addColorStop(1,"transparent"),ctx.fillStyle=a,ctx.globalAlpha=n,ctx.fillRect(t*e+5*SCALE_X,0,e-10*SCALE_X,JUDGE_Y),G.beams[t]*=.85,G.beams[t]<.01&&(G.beams[t]=0)}for(let e=G.particles.length-1;e>=0;e--){const n=G.particles[e];if(n.life-=.05,n.life<=0)G.particles.splice(e,1);else{if(n.isGlow&&!t){ctx.save(),ctx.translate(n.x||0,n.y||JUDGE_Y);const e=Math.max(.1,400*n.life*SCALE_X),t=ctx.createRadialGradient(0,0,0,0,0,e);t.addColorStop(0,"#ffffff"),t.addColorStop(.2,n.color),t.addColorStop(1,"transparent"),ctx.fillStyle=t,ctx.globalAlpha=.8*n.life,ctx.beginPath(),ctx.arc(0,0,e,0,2*Math.PI),ctx.fill(),ctx.restore()}n.isRing&&(ctx.beginPath(),ctx.arc(n.x,n.y,80*(1-n.life)*SCALE_X,0,2*Math.PI),ctx.strokeStyle=n.color,ctx.lineWidth=3*n.life,ctx.globalAlpha=.5*n.life,ctx.stroke()),n.isGlow||n.isRing||(n.x+=n.vx*SCALE_X,n.y+=n.vy,ctx.beginPath(),ctx.fillStyle=n.color,ctx.globalAlpha=n.life,ctx.arc(n.x,n.y,(n.size||2)*SCALE_X,0,2*Math.PI),ctx.fill())}}ctx.restore()}window.onresize=resizeCanvas,window.onload=resizeCanvas;const KEYS=["d","f","j","k"];function handleInputStart(e){if(-1===e)return;G.keysHeld[e]=!0;const t=document.getElementById(`k${e}`);if(t&&t.classList.add("active"),G.beams[e]=1,G.playing&&!G.paused){playSFX(G.isFever?"fever-hit":"hit");const t=G.mediaEl.currentTime,n=t+G.audioOffset,a=GAME_CONFIG.JUDGEMENT.HIT_DETECTION_RANGE,i=G.notes.find(t=>t.lane===e&&!t.hit&&!t.missed&&Math.abs(t.time-n)<=a);if(i){const a=Math.abs(i.time-n),o=GAME_CONFIG.JUDGEMENT;if(a>o.WINDOW_GOOD)i.hit=!0,i.missed=!0,triggerJudge("MISS",e);else if(i.hit=!0,i.hitTime=t,i.isLong)i.isHolding=!0;else{let t="GOOD";a<o.WINDOW_PERFECT?t="PERFECT":a<o.WINDOW_GREAT&&(t="GREAT"),triggerJudge(t,e)}}}}function handleInputEnd(e){if(-1!==e){G.keysHeld[e]=!1;const t=G.notes.find(t=>t.lane===e&&t.isLong&&t.isHolding);if(t){t.isHolding=!1;const n=G.mediaEl.currentTime,a=G.audioOffset,i=Math.abs(t.endTime-(n+a)),o=GAME_CONFIG.JUDGEMENT;i<o.WINDOW_PERFECT?triggerJudge("PERFECT",e):i<o.WINDOW_GREAT?triggerJudge("GREAT",e):i<o.WINDOW_GOOD||n>=t.endTime-.2?triggerJudge("GOOD",e):(t.missed=!0,t.time=G.mediaEl.currentTime,triggerJudge("MISS",e))}const n=document.getElementById(`k${e}`);n&&n.classList.remove("active")}}window.addEventListener("keydown",e=>{if(void 0!==actx&&"suspended"===actx.state&&actx.resume(),G.playing){const t=["Space"," ","d","f","j","k","D","F","J","K"];(t.includes(e.key)||t.includes(e.code))&&e.preventDefault()}if(e.repeat)return;"Escape"===e.key&&(G.paused?resumeGame():togglePause());handleInputStart(KEYS.indexOf(e.key.toLowerCase()))},{passive:!1}),window.onkeyup=e=>{handleInputEnd(KEYS.indexOf(e.key.toLowerCase()))};const touchStage=document.getElementById("gear-stage"),activeTouches={};function spawnExplosion(e,t){const n=t||GAME_CONFIG.COLORS.NOTE_LANES[e],a=GAME_CONFIG.COLORS.LANE_WIDTH*SCALE_X,i=e*a+a/2;G.particles.push({x:i,y:JUDGE_Y,isGlow:!0,life:1,color:n});const o=/Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent),l=o?8:15;for(let t=0;t<l;t++)G.particles.push({x:e*a+a/2,y:JUDGE_Y,vx:20*(Math.random()-.5),vy:15*(Math.random()-1.2),life:1,color:n,size:3+2*Math.random(),decayRate:o?.08:.05});G.particles.push({x:e*a+a/2,y:JUDGE_Y,isRing:!0,life:1,color:n})}touchStage.addEventListener("touchstart",e=>{e.cancelable&&e.preventDefault();const t=touchStage.getBoundingClientRect();for(let n=0;n<e.changedTouches.length;n++){const a=e.changedTouches[n];if(a.clientY>t.top+.5*t.height){const e=a.clientX-t.left,n=Math.floor(e/t.width*4);n>=0&&n<=3&&(activeTouches[a.identifier]=n,handleInputStart(n))}}},{passive:!1}),touchStage.addEventListener("touchend",e=>{e.cancelable&&e.preventDefault();for(let t=0;t<e.changedTouches.length;t++){const n=e.changedTouches[t],a=activeTouches[n.identifier];void 0!==a&&(handleInputEnd(a),delete activeTouches[n.identifier])}},{passive:!1}),touchStage.addEventListener("touchcancel",e=>{e.cancelable&&e.preventDefault();for(let t=0;t<e.changedTouches.length;t++){const n=e.changedTouches[t],a=activeTouches[n.identifier];void 0!==a&&(handleInputEnd(a),delete activeTouches[n.identifier])}},{passive:!1});const JUDGE_COLORS={PERFECT:"#ffeb3b",GREAT:"#00f3ff",GOOD:"#4caf50",MISS:"#f44336"};function triggerJudge(e,t){const n=document.getElementById("judge-txt"),a=document.getElementById("combo-box"),i=document.getElementById("gear-stage"),o=document.getElementById("bg-container"),l=GAME_CONFIG.JUDGEMENT,s=JUDGE_COLORS[e]||"#ffffff";n.innerText=e,n.style.color=s,a.classList.add("show-combo"),G.comboTimer&&clearTimeout(G.comboTimer),G.comboTimer=setTimeout(()=>a.classList.remove("show-combo"),1500);const r=void 0!==t?t:0;if("MISS"===e){if(G.lineGlow=0,n.style.transform="scale(0.8)",setTimeout(()=>n.style.transform="scale(1)",100),i.style.transform="translateX(8px)",setTimeout(()=>i.style.transform="translateX(0)",50),G.combo=0,G.stats.miss++,G.hp=Math.max(0,G.hp-l.HP_LOSS_MISS),G.failEnabled&&G.hp<=0)return void finishGame(!1);G.isFever&&endFeverEffect()}else{G.lineGlow=1,spawnExplosion(r,s),n.style.transform="scale(1.5) skewX(-15deg)";const t="PERFECT"===e;i.style.transform=`translateY(${t?5:4}px)`,t&&(i.style.filter="brightness(1.2) contrast(1.1)",o&&(o.style.transform="scale(1.0)")),setTimeout(()=>{n.style.transform="scale(1) skewX(-10deg)",i.style.transform="translateY(0)",i.style.filter="none",o&&(o.style.transform="scale(1)")},50),G.combo++,G.stats[e.toLowerCase()]++,G.stats.maxCombo=Math.max(G.combo,G.stats.maxCombo),"PERFECT"===e?G.hp=Math.min(100,G.hp+l.HP_GAIN_PERFECT):"GREAT"===e?G.hp=Math.min(100,G.hp+l.HP_GAIN_GREAT):"GOOD"===e&&(G.hp=Math.min(100,G.hp+l.HP_GAIN_GOOD));let a="PERFECT"===e?l.SCORE_PERFECT:"GREAT"===e?l.SCORE_GREAT:l.SCORE_GOOD;G.score+=a*(G.isFever?GAME_CONFIG.FEVER.SCORE_MULTIPLIER:1),G.isFever||(G.fever=Math.min(GAME_CONFIG.FEVER.MAX_VALUE,G.fever+GAME_CONFIG.FEVER.GAIN_PER_HIT),G.fever>=GAME_CONFIG.FEVER.MAX_VALUE&&startFever())}updateHUD()}function startFever(){G.isFever=!0,updateHUD(),playSFX("fever-entry"),feverFilter.frequency.setTargetAtTime(800,actx.currentTime,.05),feverBassNode&&feverBassNode.gain.setTargetAtTime(GAME_CONFIG.FEVER.BASS_GAIN,actx.currentTime,.1),document.getElementById("gear-stage").classList.add("fever-mode-active"),document.getElementById("fever-txt").style.opacity=1}function endFeverEffect(){G.isFever=!1,G.fever=0,feverFilter.frequency.setTargetAtTime(GAME_CONFIG.FEVER.FILTER_MAX_FREQ,actx.currentTime,.1),feverBassNode&&feverBassNode.gain.setTargetAtTime(0,actx.currentTime,.1);const e=document.getElementById("gear-stage");e&&(e.classList.remove("fever-mode-active"),e.style.transform="scale(1.0)"),document.getElementById("fever-txt").style.opacity=0,updateHUD()}function updateHUD(){G.hp!==G.lastHudUpdate.hp&&(document.getElementById("hp-fill").style.height=G.hp+"%",G.lastHudUpdate.hp=G.hp),G.fever!==G.lastHudUpdate.fever&&(document.getElementById("fever-fill").style.height=G.fever+"%",G.lastHudUpdate.fever=G.fever),G.combo!==G.lastHudUpdate.combo&&(document.getElementById("combo-num").innerText=G.combo||"",G.lastHudUpdate.combo=G.combo)}const sfxBus=actx.createGain();function playSFX(e,t=1){const n=actx.currentTime;if("suspended"===actx.state&&actx.resume(),"hit"===e||"fever-hit"===e){const a=actx.createOscillator(),i=actx.createGain(),o="fever-hit"===e;a.type="triangle";const l=o?150:200,s=o?20:30,r=o?.2:.1;a.frequency.setValueAtTime(l,n),a.frequency.exponentialRampToValueAtTime(s,n+r),i.gain.setValueAtTime(.8*t,n),i.gain.exponentialRampToValueAtTime(.001,n+r),a.connect(i),i.connect(sfxBus),a.start(n),a.stop(n+r)}else if("fever-entry"===e){if(!noiseBuffer)return;const e=actx.createBufferSource();e.buffer=noiseBuffer;const t=actx.createBiquadFilter();t.type="lowpass",t.frequency.setValueAtTime(200,n),t.frequency.exponentialRampToValueAtTime(5e3,n+.8);const a=actx.createGain();a.gain.setValueAtTime(0,n),a.gain.linearRampToValueAtTime(1,n+.6),a.gain.linearRampToValueAtTime(0,n+1),e.connect(t),t.connect(a),a.connect(sfxBus),e.start(n);const i=document.getElementById("gear-stage");i&&(i.classList.add("fever-shake"),setTimeout(()=>i.classList.remove("fever-shake"),1e3))}}function playMenuImpact(){if(!actx)return;const e=actx.currentTime,t=actx.createOscillator(),n=actx.createGain();t.connect(n),n.connect(masterGainNode),t.type="triangle",t.frequency.setValueAtTime(150,e),t.frequency.exponentialRampToValueAtTime(.01,e+.3),n.gain.setValueAtTime(.5,e),n.gain.exponentialRampToValueAtTime(.01,e+.3),t.start(e),t.stop(e+.3)}function handleBoxClick(e,t){document.getElementById("inp-"+t).click()}async function loadMedia(e,t){if(!e)return;G.mediaEl&&(G.mediaEl.pause(),G.mediaEl.src="",G.mediaEl.load()),G.mediaEl=null;const n=document.getElementById("bg-video");n.style.opacity=0,n.src="",document.getElementById("box-audio").classList.remove("selected"),document.getElementById("box-video").classList.remove("selected"),document.getElementById("name-audio").innerText="Select File",document.getElementById("name-video").innerText="Select File",document.getElementById("inp-"+("audio"===t?"video":"audio")).value="","suspended"===actx.state&&await actx.resume();const a=URL.createObjectURL(e),i=document.getElementById("song-name-text");if(i&&(i.innerText=e.name.replace(/\.[^/.]+$/,"").toUpperCase()),document.getElementById("box-"+t).classList.add("selected"),document.getElementById("name-"+t).innerText=e.name,"video"===t)n.src=a,n.load(),n.style.opacity=1,G.mediaEl=n,G.mediaType="video";else{const e=new Audio;e.src=a,e.crossOrigin="anonymous",G.mediaEl=e,G.mediaType="audio"}try{const t=await e.arrayBuffer(),n=await actx.decodeAudioData(t);await preScanAudio(n),G.bpm=await analyzeBPM()}catch(e){console.error("解析失敗:",e),G.bpm=GAME_CONFIG.AUDIO.DEFAULT_BPM}G.mediaEl.loop=!1,G.mediaEl.addEventListener("ended",()=>{setTimeout(()=>{G.playing&&!G.paused&&finishGame(!0)},2500)}),document.getElementById("diff-opt").style.display="block"}async function preInitGame(e){const t=document.getElementById("difficulty-display");if(t&&(t.style.display="block",e<=.7?(t.innerText="EASY",t.style.color="var(--neon-blue)"):e<=1?(t.innerText="NORMAL",t.style.color="var(--neon-blue)"):(t.innerText="HARD",t.style.color="var(--neon-pink)")),document.activeElement instanceof HTMLElement&&document.activeElement.blur(),window.focus(),document.body.focus(),"suspended"===actx.state&&await actx.resume(),G.diff=e,G.failEnabled=document.getElementById("chk-fail").checked,G.bpm=await analyzeBPM(),G.spawnFilterRate=1.1,G.spawnFilterRate=e<=.7?G.bpm<115?.5:.6:e<=1?G.bpm<115?.7:.8:1.3,G.baseSpeed=G.bpm/120*1,feverBassNode=actx.createBiquadFilter(),feverBassNode.type="lowshelf",feverBassNode.frequency.value=200,feverBassNode.gain.value=0,mainSource)try{mainSource.disconnect()}catch(e){}try{"video"===G.mediaType?(G.videoSourceNode||(G.videoSourceNode=actx.createMediaElementSource(G.mediaEl)),mainSource=G.videoSourceNode):mainSource=actx.createMediaElementSource(G.mediaEl),mainSource.connect(analyser),analyser.connect(feverFilter),feverFilter.connect(feverBassNode),feverBassNode.connect(masterGainNode)}catch(e){}document.getElementById("menu-screen").classList.add("hidden"),"running"!==actx.state&&await actx.resume(),startCountdown()}function startCountdown(){"suspended"===actx.state&&actx.resume(),G.screen="COUNTDOWN",G.notes.forEach(e=>e.isDead=!0),G.notes=[],G.smoothTime=0,G.mediaEl&&(G.mediaEl.currentTime=0);const e=document.getElementById("cd-num");document.getElementById("cd-screen").classList.remove("hidden");const t=document.getElementById("menu-bgm");if(t){G.menuFadeTimer&&clearInterval(G.menuFadeTimer);let e=menuGainNode?menuGainNode.gain.value:t.volume,n=20;const a=setInterval(()=>{e=Math.max(0,e-.05),menuGainNode?menuGainNode.gain.value=e:t.volume=e,n--,(e<=0||n<=0)&&(menuGainNode?menuGainNode.gain.value=0:t.volume=0,t.pause(),t.currentTime=0,clearInterval(a))},30)}const n=setInterval(()=>{window.focus()},500);let a=3;e.innerText=a;let i=setInterval(()=>{if(a--,2===a){for(let e=0;e<30;e++)G.notes.push({lane:0,time:0,isDead:!0});playSFX("hit",.001)}1===a&&G.mediaEl&&(G.mediaEl.muted=!0,G.mediaEl.volume=0,G.mediaEl.play().then(()=>{setTimeout(()=>{G.mediaEl.pause(),G.mediaEl.currentTime=0,G.mediaEl.muted=!1,G.mediaEl.volume=1},400)}).catch(e=>{})),a>0?e.innerText=a:0===a?e.innerText="GO!":(clearInterval(i),clearInterval(n),document.getElementById("cd-screen").classList.add("hidden"),window.focus(),document.activeElement&&document.activeElement.blur(),document.body.focus(),initGameValues(),setTimeout(()=>{startGame()},50))},1e3)}function initGameValues(){G.hp=100,G.score=0,G.combo=0,G.maxCombo=0,G.fever=0,G.isFever=!1,G.playing=!1,G.notes=[],G.keysHeld=[!1,!1,!1,!1],G.activeLongNotes=[null,null,null,null],G.lastS=0,G.laneT=[0,0,0,0],G.laneEndTime=[0,0,0,0],G.lnCooldown=[0,0,0,0],G.recentNoteCount=0,G.lastDensityUpdate=0,G.particles=[],G.beams=[0,0,0,0],G.stats={perfect:0,great:0,good:0,miss:0,maxCombo:0},G.avgK=40,G.avgL=30,G.smoothTime=0,G.lastFrameTime=0,G.lastAnalysisTime=0,G.lastHudUpdate={hp:-1,fever:-1,combo:-1},G.speedLerp=1,updateHUD(),document.getElementById("gear-stage").classList.remove("fever-mode-active"),document.getElementById("fever-txt").style.opacity=0;const e=document.getElementById("combo-box");e&&e.classList.remove("show-combo")}function startGame(){G.screen="PLAYING",G.playing=!0,G.paused=!1,resizeCanvas(),G.mediaEl.currentTime>0&&(G.mediaEl.currentTime=0),G.smoothTime=0,G.lastFrameTime=performance.now(),G.mediaEl.muted=!1,G.mediaEl.play().catch(e=>console.log("Auto-play blocked")),loop()}function togglePause(){"PLAYING"!==G.screen&&"PAUSED"!==G.screen||G.paused||(G.paused=!0,G.mediaEl.pause(),cancelAnimationFrame(G.animId),document.getElementById("pause-screen").classList.remove("hidden"))}function resumeGame(){document.getElementById("pause-screen").classList.add("hidden");const e=document.getElementById("cd-screen"),t=document.getElementById("cd-num");e.classList.remove("hidden"),e.style.background="rgba(0,0,0,0.5)",e.style.backdropFilter="blur(2px)",e.style.webkitBackdropFilter="blur(2px)";let n=3;t.innerText=n;const a=setInterval(()=>{n--,n>0?t.innerText=n:(clearInterval(a),e.classList.add("hidden"),e.style.background="",e.style.backdropFilter="",e.style.webkitBackdropFilter="",G.paused=!1,G.mediaEl.play(),G.lastFrameTime=performance.now(),G.smoothTime=G.mediaEl.currentTime,loop())},1e3)}function retryGame(){G.paused=!1,cancelAnimationFrame(G.animId),G.mediaEl&&(G.mediaEl.pause(),G.mediaEl.currentTime=0),stopResultMusic(),initGameValues(),document.getElementById("pause-screen").classList.add("hidden"),document.getElementById("result-screen").classList.add("hidden"),window.focus(),document.activeElement&&document.activeElement.blur(),startCountdown()}function backToMenu(){G.playing=!1,G.paused=!1,cancelAnimationFrame(G.animId),G.mediaEl&&(G.mediaEl.pause(),G.mediaEl.currentTime=0),stopResultMusic(),initGameValues(),document.getElementById("pause-screen").classList.add("hidden"),document.getElementById("result-screen").classList.add("hidden"),document.getElementById("cd-screen").classList.add("hidden"),document.getElementById("gear-stage").classList.remove("fever-mode-active"),document.getElementById("diff-opt").style.display="none",document.getElementById("box-audio").classList.remove("selected"),document.getElementById("box-video").classList.remove("selected"),document.getElementById("name-audio").innerText="Select File",document.getElementById("name-video").innerText="Select File",document.getElementById("inp-audio").value="",document.getElementById("inp-video").value="",G.screen="MENU",document.getElementById("menu-screen").classList.remove("hidden"),document.getElementById("start-overlay").style.display="none",document.getElementById("menu-main-content").style.visibility="visible",tryPlayMenuBgm()}function playResultMusicRobust(e){const t=e?document.getElementById("bgm-clear"):document.getElementById("bgm-fail");let n=null;if(e?(clearSource||(clearSource=actx.createMediaElementSource(t),clearGain=actx.createGain(),clearSource.connect(clearGain),clearGain.connect(masterGainNode)),n=clearGain):(failSource||(failSource=actx.createMediaElementSource(t),failGain=actx.createGain(),failSource.connect(failGain),failGain.connect(masterGainNode)),n=failGain),n){n.gain.setValueAtTime(0,actx.currentTime),t.currentTime=0,t.loop=!0,t.load();const e=t.play();void 0!==e&&e.then(()=>{let e=0;resultFadeTimer&&clearInterval(resultFadeTimer),resultFadeTimer=setInterval(()=>{e+=.02,e>=.4?(n.gain.value=.4,clearInterval(resultFadeTimer)):n.gain.value=e},50)}).catch(e=>console.error(e))}}function stopResultMusic(){resultFadeTimer&&clearInterval(resultFadeTimer);const e=document.getElementById("bgm-clear"),t=document.getElementById("bgm-fail");e&&(e.pause(),e.currentTime=0),t&&(t.pause(),t.currentTime=0)}function finishGame(e){G.playing=!1,G.screen="RESULT",cancelAnimationFrame(G.animId),G.mediaEl.pause(),playResultMusicRobust(e);document.getElementById("result-screen").classList.remove("hidden");const t=document.getElementById("res-rank"),n=document.getElementById("res-title"),a=document.getElementById("res-fc");a&&a.classList.add("hidden"),document.getElementById("st-perf").innerText=G.stats.perfect,document.getElementById("st-great").innerText=G.stats.great,document.getElementById("st-good").innerText=G.stats.good,document.getElementById("st-miss").innerText=G.stats.miss,document.getElementById("res-score").innerText=Math.floor(G.score);const i=G.stats.perfect+G.stats.great+G.stats.good+G.stats.miss;if(i>0&&(updateStatBar("bar-perf",G.stats.perfect,i),updateStatBar("bar-great",G.stats.great,i),updateStatBar("bar-good",G.stats.good,i),updateStatBar("bar-miss",G.stats.miss,i)),e){n.innerText="STAGE CLEAR";let e=1*G.stats.perfect+.7*G.stats.great+.3*G.stats.good,o=i>0?e/i:0;t.style.textShadow="0 0 20px currentColor",o>=.99?(t.innerText="SSS",t.style.color="#ffffff",t.style.textShadow="0 0 20px #fff, 0 0 40px #ffcc00"):o>=.96?(t.innerText="SS",t.style.color="#ffcc00",t.style.textShadow="0 0 15px #ffcc00, 0 0 5px #000"):o>=.9?(t.innerText="S",t.style.color="#00f3ff",t.style.textShadow="0 0 10px #00f3ff"):o>=.8?(t.innerText="A",t.style.color="#00ff00",t.style.textShadow="0 0 10px #00ff00"):o>=.7?(t.innerText="B",t.style.color="#ffff00",t.style.textShadow="none"):o>=.6?(t.innerText="C",t.style.color="#ffaa00",t.style.textShadow="none"):(t.innerText="D",t.style.color="#888888",t.style.textShadow="none"),0===G.stats.miss&&i>0&&a&&a.classList.remove("hidden")}else n.innerText="GAME OVER",t.innerText="F",t.style.color="#ff3333";const o=document.getElementById("difficulty-display");o&&(o.style.display="none")}function updateStatBar(e,t,n){const a=document.getElementById(e);a&&(a.style.width=t/n*100+"%")}function changeSpeed(e){const t=GAME_CONFIG.SPEED.OPTIONS;G.scrollSpeedIndex+=e,G.scrollSpeedIndex<0&&(G.scrollSpeedIndex=0),G.scrollSpeedIndex>=t.length&&(G.scrollSpeedIndex=t.length-1),G.scrollSpeed=t[G.scrollSpeedIndex];const n=document.getElementById("speed-display");n&&(n.innerText=G.scrollSpeed.toFixed(2)+"x")}function tryPlayMenuBgm(){const e=document.getElementById("menu-bgm");if(e&&"MENU"===G.screen){const t=.24;menuGainNode||(menuSource=actx.createMediaElementSource(e),menuGainNode=actx.createGain(),menuSource.connect(menuGainNode),menuGainNode.connect(masterGainNode)),G.menuFadeTimer&&clearInterval(G.menuFadeTimer),menuGainNode.gain.setValueAtTime(0,actx.currentTime),e.loop=!0;const n=e.play();void 0!==n&&n.then(()=>{G.menuFadeTimer=setInterval(()=>{let e=menuGainNode.gain.value;e<t?menuGainNode.gain.value=Math.min(t,e+.02):clearInterval(G.menuFadeTimer)},100)}).catch(e=>{})}}sfxBus.connect(masterGainNode),document.addEventListener("DOMContentLoaded",()=>{const e=document.getElementById("start-overlay"),t=document.getElementById("menu-main-content"),n=(/iPad|iPhone|iPod|android|webOS/i.test(navigator.userAgent)||"MacIntel"===navigator.platform&&navigator.maxTouchPoints,document.getElementById("volume-slider")),a=document.getElementById("volume-display");n.addEventListener("input",e=>{const t=parseFloat(e.target.value);G.volume=t,masterGainNode.gain.cancelScheduledValues(actx.currentTime),masterGainNode.gain.linearRampToValueAtTime(t,actx.currentTime+.05),a.innerText=Math.round(100*t)+"%"}),e&&(e.onclick=()=>{e.style.display="none",t.style.visibility="visible","suspended"===actx.state&&actx.resume(),tryPlayMenuBgm()})});
 </script>
 </body>
 </html>
